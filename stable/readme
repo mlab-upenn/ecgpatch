@@ -1,0 +1,10 @@
+This directory contains the stable and minimal version of ECG patch 
+over Nano-RK CMU firefly platform. 
+
+nano-RK/projects/ECG  - contains the code that runs the ECG patch that 
+reads data from the ECG leeds using ADC driver over SPI bus at 100Hz and 
+sends it over RF using BMAC. 
+
+nano-RK/projects/ECG_rx - contains the reception code that runs the ECG gateway 
+connected to the PC.  This code reads RF data using BMAC and sends it to the 
+PC over UART.
