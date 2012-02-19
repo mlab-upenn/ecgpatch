@@ -1,0 +1,4 @@
+This file contains the matlab data processing and UI code for ECG signals. The code 
+expects data to arrive over serial COM3 channel and plots the data from 3 ECG patches
+on three graphs out of which the first one calculates heart beats per minute. 
+The graph has a plotting winow of 1000 points.
