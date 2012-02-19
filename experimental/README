@@ -1,0 +1,6 @@
+This directory contains the ECG patch code together drivers/code for additional 
+sensors e.g. Accelerometer.
+project/ECG/ contains drivers for internal and external ADC.
+external ADC is same as the one present in stable version that interfaces the ADC7705
+over the SPI bus. Internal ADC driver is the ADC driver present for Atmage2181 internal
+ADC modified to work in interrupt mode and process accelerometer (adxl330) data only. 

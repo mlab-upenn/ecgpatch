@@ -1,0 +1,2272 @@
+   1               		.file	"bmac.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.global __do_copy_data
+   8               		.global __do_clear_bss
+  11               		.text
+  12               	.Ltext0:
+ 141               	.global	bmac_tx_busy
+ 143               	bmac_tx_busy:
+ 144               		.stabd	46,0,0
+   1:../../src/net/bmac/bmac.c **** /******************************************************************************
+   2:../../src/net/bmac/bmac.c **** *  Nano-RK, a real-time operating system for sensor networks.
+   3:../../src/net/bmac/bmac.c **** *  Copyright (C) 2007, Real-Time and Multimedia Lab, Carnegie Mellon University
+   4:../../src/net/bmac/bmac.c **** *  All rights reserved.
+   5:../../src/net/bmac/bmac.c **** *
+   6:../../src/net/bmac/bmac.c **** *  This is the Open Source Version of Nano-RK included as part of a Dual
+   7:../../src/net/bmac/bmac.c **** *  Licensing Model. If you are unsure which license to use please refer to:
+   8:../../src/net/bmac/bmac.c **** *  http://www.nanork.org/nano-RK/wiki/Licensing
+   9:../../src/net/bmac/bmac.c **** *
+  10:../../src/net/bmac/bmac.c **** *  This program is free software: you can redistribute it and/or modify
+  11:../../src/net/bmac/bmac.c **** *  it under the terms of the GNU General Public License as published by
+  12:../../src/net/bmac/bmac.c **** *  the Free Software Foundation, version 2.0 of the License.
+  13:../../src/net/bmac/bmac.c **** *
+  14:../../src/net/bmac/bmac.c **** *  This program is distributed in the hope that it will be useful,
+  15:../../src/net/bmac/bmac.c **** *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  16:../../src/net/bmac/bmac.c **** *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  17:../../src/net/bmac/bmac.c **** *  GNU General Public License for more details.
+  18:../../src/net/bmac/bmac.c **** *
+  19:../../src/net/bmac/bmac.c **** *  You should have received a copy of the GNU General Public License
+  20:../../src/net/bmac/bmac.c **** *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  21:../../src/net/bmac/bmac.c **** *
+  22:../../src/net/bmac/bmac.c **** *  Contributing Authors (specific to this file):
+  23:../../src/net/bmac/bmac.c **** *  Anthony Rowe
+  24:../../src/net/bmac/bmac.c **** *******************************************************************************/
+  25:../../src/net/bmac/bmac.c **** 
+  26:../../src/net/bmac/bmac.c **** 
+  27:../../src/net/bmac/bmac.c **** 
+  28:../../src/net/bmac/bmac.c **** #include <include.h>
+  29:../../src/net/bmac/bmac.c **** #include <ulib.h>
+  30:../../src/net/bmac/bmac.c **** #include <stdlib.h>
+  31:../../src/net/bmac/bmac.c **** #include <avr/sleep.h>
+  32:../../src/net/bmac/bmac.c **** #include <avr/wdt.h>
+  33:../../src/net/bmac/bmac.c **** #include <avr/eeprom.h>
+  34:../../src/net/bmac/bmac.c **** #include <stdio.h>
+  35:../../src/net/bmac/bmac.c **** #include <avr/interrupt.h>
+  36:../../src/net/bmac/bmac.c **** #include <nrk.h>
+  37:../../src/net/bmac/bmac.c **** #include <nrk_events.h>
+  38:../../src/net/bmac/bmac.c **** #include <nrk_timer.h>
+  39:../../src/net/bmac/bmac.c **** #include <nrk_error.h>
+  40:../../src/net/bmac/bmac.c **** #include <bmac.h>
+  41:../../src/net/bmac/bmac.c **** 
+  42:../../src/net/bmac/bmac.c **** //#define DEBUG
+  43:../../src/net/bmac/bmac.c **** 
+  44:../../src/net/bmac/bmac.c **** uint8_t tx_data_ready;
+  45:../../src/net/bmac/bmac.c **** uint8_t rx_buf_empty;
+  46:../../src/net/bmac/bmac.c **** uint8_t bmac_running;
+  47:../../src/net/bmac/bmac.c **** uint8_t pkt_got_ack;
+  48:../../src/net/bmac/bmac.c **** uint8_t g_chan;
+  49:../../src/net/bmac/bmac.c **** uint8_t is_enabled;
+  50:../../src/net/bmac/bmac.c **** 
+  51:../../src/net/bmac/bmac.c **** nrk_time_t _bmac_check_period;
+  52:../../src/net/bmac/bmac.c **** 
+  53:../../src/net/bmac/bmac.c **** uint8_t bmac_tx_busy() {return tx_data_ready;};
+ 146               	.LM0:
+ 147               	.LFBB1:
+ 148               	/* prologue: frame size=0 */
+ 149               	/* prologue end (size=0) */
+ 150 0000 8091 0000 		lds r24,tx_data_ready
+ 151 0004 9927      		clr r25
+ 152               	/* epilogue: frame size=0 */
+ 153 0006 0895      		ret
+ 154               	/* epilogue end (size=1) */
+ 155               	/* function bmac_tx_busy size 4 (3) */
+ 157               	.Lscope1:
+ 159               		.stabd	78,0,0
+ 161               	.global	bmac_got_ack
+ 163               	bmac_got_ack:
+ 164               		.stabd	46,0,0
+  54:../../src/net/bmac/bmac.c **** 
+  55:../../src/net/bmac/bmac.c **** uint8_t bmac_got_ack() {return pkt_got_ack;};
+ 166               	.LM1:
+ 167               	.LFBB2:
+ 168               	/* prologue: frame size=0 */
+ 169               	/* prologue end (size=0) */
+ 170 0008 8091 0000 		lds r24,pkt_got_ack
+ 171 000c 9927      		clr r25
+ 172               	/* epilogue: frame size=0 */
+ 173 000e 0895      		ret
+ 174               	/* epilogue end (size=1) */
+ 175               	/* function bmac_got_ack size 4 (3) */
+ 177               	.Lscope2:
+ 179               		.stabd	78,0,0
+ 182               	.global	rf_rx_callback
+ 184               	rf_rx_callback:
+ 185               		.stabd	46,0,0
+  56:../../src/net/bmac/bmac.c **** 
+  57:../../src/net/bmac/bmac.c **** /**
+  58:../../src/net/bmac/bmac.c ****  *  This is a callback if you require immediate response to a packet
+  59:../../src/net/bmac/bmac.c ****  */
+  60:../../src/net/bmac/bmac.c **** RF_RX_INFO *rf_rx_callback (RF_RX_INFO * pRRI)
+  61:../../src/net/bmac/bmac.c **** {
+ 187               	.LM2:
+ 188               	.LFBB3:
+ 189               	/* prologue: frame size=0 */
+ 190               	/* prologue end (size=0) */
+ 191               	/* epilogue: frame size=0 */
+ 192 0010 0895      		ret
+ 193               	/* epilogue end (size=1) */
+ 194               	/* function rf_rx_callback size 1 (0) */
+ 196               	.Lscope3:
+ 198               		.stabd	78,0,0
+ 201               	.global	bmac_addr_decode_dest_mac
+ 203               	bmac_addr_decode_dest_mac:
+ 204               		.stabd	46,0,0
+  62:../../src/net/bmac/bmac.c ****     // Any code here gets called the instant a packet is received from the interrupt   
+  63:../../src/net/bmac/bmac.c ****     return pRRI;
+  64:../../src/net/bmac/bmac.c **** }
+  65:../../src/net/bmac/bmac.c **** 
+  66:../../src/net/bmac/bmac.c **** int8_t bmac_encryption_set_ctr_counter(uint8_t *counter, uint8_t len)
+  67:../../src/net/bmac/bmac.c **** {
+  68:../../src/net/bmac/bmac.c **** if(len!=4 ) return NRK_ERROR;
+  69:../../src/net/bmac/bmac.c **** rf_security_set_ctr_counter(counter);
+  70:../../src/net/bmac/bmac.c ****    return NRK_OK;
+  71:../../src/net/bmac/bmac.c **** }
+  72:../../src/net/bmac/bmac.c **** 
+  73:../../src/net/bmac/bmac.c **** int8_t bmac_tx_reserve_set( nrk_time_t *period, uint16_t pkts )
+  74:../../src/net/bmac/bmac.c **** {
+  75:../../src/net/bmac/bmac.c **** 
+  76:../../src/net/bmac/bmac.c **** #ifdef NRK_MAX_RESERVES
+  77:../../src/net/bmac/bmac.c **** // Create a reserve if it doesn't exist
+  78:../../src/net/bmac/bmac.c **** if(tx_reserve==-1) tx_reserve=nrk_reserve_create();
+  79:../../src/net/bmac/bmac.c **** if(tx_reserve>=0)
+  80:../../src/net/bmac/bmac.c ****   return nrk_reserve_set(tx_reserve, period,pkts,NULL);
+  81:../../src/net/bmac/bmac.c **** else return NRK_ERROR;
+  82:../../src/net/bmac/bmac.c **** #else
+  83:../../src/net/bmac/bmac.c **** return NRK_ERROR;
+  84:../../src/net/bmac/bmac.c **** #endif
+  85:../../src/net/bmac/bmac.c **** }
+  86:../../src/net/bmac/bmac.c **** 
+  87:../../src/net/bmac/bmac.c **** uint16_t bmac_tx_reserve_get()
+  88:../../src/net/bmac/bmac.c **** {
+  89:../../src/net/bmac/bmac.c **** #ifdef NRK_MAX_RESERVES
+  90:../../src/net/bmac/bmac.c **** if(tx_reserve>=0)
+  91:../../src/net/bmac/bmac.c ****   return nrk_reserve_get(tx_reserve);
+  92:../../src/net/bmac/bmac.c **** else return 0;
+  93:../../src/net/bmac/bmac.c **** #else
+  94:../../src/net/bmac/bmac.c **** return 0;
+  95:../../src/net/bmac/bmac.c **** #endif
+  96:../../src/net/bmac/bmac.c **** }
+  97:../../src/net/bmac/bmac.c **** 
+  98:../../src/net/bmac/bmac.c **** 
+  99:../../src/net/bmac/bmac.c **** int8_t  bmac_auto_ack_disable() 
+ 100:../../src/net/bmac/bmac.c **** {
+ 101:../../src/net/bmac/bmac.c **** rf_auto_ack_disable();
+ 102:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 103:../../src/net/bmac/bmac.c **** }
+ 104:../../src/net/bmac/bmac.c **** 
+ 105:../../src/net/bmac/bmac.c **** int8_t  bmac_auto_ack_enable() 
+ 106:../../src/net/bmac/bmac.c **** {
+ 107:../../src/net/bmac/bmac.c **** rf_auto_ack_enable();
+ 108:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 109:../../src/net/bmac/bmac.c **** }
+ 110:../../src/net/bmac/bmac.c **** 
+ 111:../../src/net/bmac/bmac.c **** int8_t  bmac_addr_decode_disable() 
+ 112:../../src/net/bmac/bmac.c **** {
+ 113:../../src/net/bmac/bmac.c **** rf_addr_decode_disable();
+ 114:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 115:../../src/net/bmac/bmac.c **** }
+ 116:../../src/net/bmac/bmac.c **** 
+ 117:../../src/net/bmac/bmac.c **** int8_t  bmac_addr_decode_enable() 
+ 118:../../src/net/bmac/bmac.c **** {
+ 119:../../src/net/bmac/bmac.c **** rf_addr_decode_enable();
+ 120:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 121:../../src/net/bmac/bmac.c **** }
+ 122:../../src/net/bmac/bmac.c **** 
+ 123:../../src/net/bmac/bmac.c **** int8_t bmac_addr_decode_set_my_mac(uint16_t my_mac)
+ 124:../../src/net/bmac/bmac.c **** {
+ 125:../../src/net/bmac/bmac.c **** rf_addr_decode_set_my_mac(my_mac);
+ 126:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 127:../../src/net/bmac/bmac.c **** }
+ 128:../../src/net/bmac/bmac.c **** 
+ 129:../../src/net/bmac/bmac.c **** int8_t  bmac_addr_decode_dest_mac(uint16_t dest) 
+ 130:../../src/net/bmac/bmac.c **** {
+ 206               	.LM3:
+ 207               	.LFBB4:
+ 208               	/* prologue: frame size=0 */
+ 209               	/* prologue end (size=0) */
+ 131:../../src/net/bmac/bmac.c **** bmac_rfTxInfo.destAddr=dest;
+ 211               	.LM4:
+ 212 0012 9093 0000 		sts (bmac_rfTxInfo)+1,r25
+ 213 0016 8093 0000 		sts bmac_rfTxInfo,r24
+ 132:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 133:../../src/net/bmac/bmac.c **** }
+ 215               	.LM5:
+ 216 001a 81E0      		ldi r24,lo8(1)
+ 217 001c 90E0      		ldi r25,hi8(1)
+ 218               	/* epilogue: frame size=0 */
+ 219 001e 0895      		ret
+ 220               	/* epilogue end (size=1) */
+ 221               	/* function bmac_addr_decode_dest_mac size 7 (6) */
+ 223               	.Lscope4:
+ 225               		.stabd	78,0,0
+ 228               	.global	bmac_set_cca_active
+ 230               	bmac_set_cca_active:
+ 231               		.stabd	46,0,0
+ 134:../../src/net/bmac/bmac.c **** 
+ 135:../../src/net/bmac/bmac.c **** int8_t bmac_rx_pkt_is_encrypted()
+ 136:../../src/net/bmac/bmac.c **** {
+ 137:../../src/net/bmac/bmac.c **** return rf_security_last_pkt_status();
+ 138:../../src/net/bmac/bmac.c **** }
+ 139:../../src/net/bmac/bmac.c **** 
+ 140:../../src/net/bmac/bmac.c **** int8_t bmac_encryption_set_key(uint8_t *key, uint8_t len)
+ 141:../../src/net/bmac/bmac.c **** {
+ 142:../../src/net/bmac/bmac.c ****   if(len!=16) return NRK_ERROR;
+ 143:../../src/net/bmac/bmac.c ****   rf_security_set_key(key);
+ 144:../../src/net/bmac/bmac.c ****   return NRK_OK;
+ 145:../../src/net/bmac/bmac.c **** }
+ 146:../../src/net/bmac/bmac.c **** 
+ 147:../../src/net/bmac/bmac.c **** int8_t bmac_encryption_enable()
+ 148:../../src/net/bmac/bmac.c **** {
+ 149:../../src/net/bmac/bmac.c ****   rf_security_enable();
+ 150:../../src/net/bmac/bmac.c ****   return NRK_OK;
+ 151:../../src/net/bmac/bmac.c **** }
+ 152:../../src/net/bmac/bmac.c **** 
+ 153:../../src/net/bmac/bmac.c **** int8_t bmac_encryption_disable()
+ 154:../../src/net/bmac/bmac.c **** {
+ 155:../../src/net/bmac/bmac.c ****   rf_security_disable();
+ 156:../../src/net/bmac/bmac.c ****   return NRK_OK;
+ 157:../../src/net/bmac/bmac.c **** }
+ 158:../../src/net/bmac/bmac.c **** 
+ 159:../../src/net/bmac/bmac.c **** 
+ 160:../../src/net/bmac/bmac.c **** int8_t bmac_set_rf_power(uint8_t power)
+ 161:../../src/net/bmac/bmac.c **** {
+ 162:../../src/net/bmac/bmac.c **** if(power>31) return NRK_ERROR;
+ 163:../../src/net/bmac/bmac.c **** rf_tx_power(power);
+ 164:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 165:../../src/net/bmac/bmac.c **** }
+ 166:../../src/net/bmac/bmac.c **** 
+ 167:../../src/net/bmac/bmac.c **** void bmac_set_cca_active(uint8_t active)
+ 168:../../src/net/bmac/bmac.c **** {
+ 233               	.LM6:
+ 234               	.LFBB5:
+ 235               	/* prologue: frame size=0 */
+ 236               	/* prologue end (size=0) */
+ 169:../../src/net/bmac/bmac.c **** cca_active=active;
+ 238               	.LM7:
+ 239 0020 8093 0000 		sts cca_active,r24
+ 240               	/* epilogue: frame size=0 */
+ 241 0024 0895      		ret
+ 242               	/* epilogue end (size=1) */
+ 243               	/* function bmac_set_cca_active size 3 (2) */
+ 245               	.Lscope5:
+ 247               		.stabd	78,0,0
+ 251               	.global	bmac_rx_pkt_set_buffer
+ 253               	bmac_rx_pkt_set_buffer:
+ 254               		.stabd	46,0,0
+ 170:../../src/net/bmac/bmac.c **** }
+ 171:../../src/net/bmac/bmac.c **** 
+ 172:../../src/net/bmac/bmac.c **** int8_t bmac_set_cca_thresh(int8_t thresh)
+ 173:../../src/net/bmac/bmac.c **** {
+ 174:../../src/net/bmac/bmac.c ****   rf_set_cca_thresh(thresh); 
+ 175:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 176:../../src/net/bmac/bmac.c **** }
+ 177:../../src/net/bmac/bmac.c **** 
+ 178:../../src/net/bmac/bmac.c **** int8_t bmac_set_channel(uint8_t chan)
+ 179:../../src/net/bmac/bmac.c **** {
+ 180:../../src/net/bmac/bmac.c **** if(chan>26) return NRK_ERROR;
+ 181:../../src/net/bmac/bmac.c **** g_chan=chan;
+ 182:../../src/net/bmac/bmac.c **** rf_init (&bmac_rfRxInfo, chan, 0xFFFF, 0x00000);
+ 183:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 184:../../src/net/bmac/bmac.c **** }
+ 185:../../src/net/bmac/bmac.c **** 
+ 186:../../src/net/bmac/bmac.c **** 
+ 187:../../src/net/bmac/bmac.c **** int8_t bmac_wait_until_rx_pkt()
+ 188:../../src/net/bmac/bmac.c **** {
+ 189:../../src/net/bmac/bmac.c **** nrk_sig_mask_t event;
+ 190:../../src/net/bmac/bmac.c **** 
+ 191:../../src/net/bmac/bmac.c ****     nrk_signal_register(bmac_rx_pkt_signal); 
+ 192:../../src/net/bmac/bmac.c ****     event=nrk_event_wait (SIG(bmac_rx_pkt_signal));
+ 193:../../src/net/bmac/bmac.c **** 
+ 194:../../src/net/bmac/bmac.c **** // Check if it was a time out instead of packet RX signal
+ 195:../../src/net/bmac/bmac.c **** if((event & SIG(bmac_rx_pkt_signal)) == 0 ) return NRK_ERROR;
+ 196:../../src/net/bmac/bmac.c **** else return NRK_OK;
+ 197:../../src/net/bmac/bmac.c **** }
+ 198:../../src/net/bmac/bmac.c **** 
+ 199:../../src/net/bmac/bmac.c **** int8_t bmac_rx_pkt_set_buffer(uint8_t *buf, uint8_t size)
+ 200:../../src/net/bmac/bmac.c **** {
+ 256               	.LM8:
+ 257               	.LFBB6:
+ 258               	/* prologue: frame size=0 */
+ 259               	/* prologue end (size=0) */
+ 201:../../src/net/bmac/bmac.c **** if(buf==NULL) return NRK_ERROR;
+ 261               	.LM9:
+ 262 0026 0097      		sbiw r24,0
+ 263 0028 01F4      		brne .L12
+ 265               	.LM10:
+ 266 002a 8FEF      		ldi r24,lo8(-1)
+ 267 002c 9FEF      		ldi r25,hi8(-1)
+ 268 002e 0895      		ret
+ 269               	.L12:
+ 202:../../src/net/bmac/bmac.c ****     bmac_rfRxInfo.pPayload = buf;
+ 271               	.LM11:
+ 272 0030 9093 0000 		sts (bmac_rfRxInfo+5)+1,r25
+ 273 0034 8093 0000 		sts bmac_rfRxInfo+5,r24
+ 203:../../src/net/bmac/bmac.c ****     bmac_rfRxInfo.max_length = size;
+ 275               	.LM12:
+ 276 0038 6093 0000 		sts bmac_rfRxInfo+4,r22
+ 204:../../src/net/bmac/bmac.c ****     rx_buf_empty=1;
+ 278               	.LM13:
+ 279 003c 81E0      		ldi r24,lo8(1)
+ 280 003e 8093 0000 		sts rx_buf_empty,r24
+ 281 0042 81E0      		ldi r24,lo8(1)
+ 282 0044 90E0      		ldi r25,hi8(1)
+ 205:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 206:../../src/net/bmac/bmac.c **** }
+ 284               	.LM14:
+ 285 0046 0895      		ret
+ 286               	/* epilogue: frame size=0 */
+ 287               	/* epilogue: noreturn */
+ 288               	/* epilogue end (size=0) */
+ 289               	/* function bmac_rx_pkt_set_buffer size 17 (17) */
+ 291               	.Lscope6:
+ 293               		.stabd	78,0,0
+ 297               	.global	bmac_tx_pkt_nonblocking
+ 299               	bmac_tx_pkt_nonblocking:
+ 300               		.stabd	46,0,0
+ 207:../../src/net/bmac/bmac.c **** 
+ 208:../../src/net/bmac/bmac.c **** int8_t bmac_init (uint8_t chan)
+ 209:../../src/net/bmac/bmac.c **** {
+ 210:../../src/net/bmac/bmac.c ****     tx_reserve=-1;
+ 211:../../src/net/bmac/bmac.c ****     cca_active=true;
+ 212:../../src/net/bmac/bmac.c ****     _bmac_check_period.secs=0;
+ 213:../../src/net/bmac/bmac.c ****     _bmac_check_period.nano_secs=BMAC_DEFAULT_CHECK_RATE_MS*NANOS_PER_MS;
+ 214:../../src/net/bmac/bmac.c ****     bmac_rx_pkt_signal=nrk_signal_create();
+ 215:../../src/net/bmac/bmac.c ****     if(bmac_rx_pkt_signal==NRK_ERROR)
+ 216:../../src/net/bmac/bmac.c **** 	{
+ 217:../../src/net/bmac/bmac.c **** 	nrk_kprintf(PSTR("BMAC ERROR: creating rx signal failed\r\n"));
+ 218:../../src/net/bmac/bmac.c **** 	nrk_kernel_error_add(NRK_SIGNAL_CREATE_ERROR,nrk_cur_task_TCB->task_ID);
+ 219:../../src/net/bmac/bmac.c **** 	return NRK_ERROR;
+ 220:../../src/net/bmac/bmac.c **** 	}
+ 221:../../src/net/bmac/bmac.c ****     bmac_tx_pkt_done_signal=nrk_signal_create();
+ 222:../../src/net/bmac/bmac.c ****     if(bmac_tx_pkt_done_signal==NRK_ERROR)
+ 223:../../src/net/bmac/bmac.c **** 	{
+ 224:../../src/net/bmac/bmac.c **** 	nrk_kprintf(PSTR("BMAC ERROR: creating tx signal failed\r\n"));
+ 225:../../src/net/bmac/bmac.c **** 	nrk_kernel_error_add(NRK_SIGNAL_CREATE_ERROR,nrk_cur_task_TCB->task_ID);
+ 226:../../src/net/bmac/bmac.c **** 	return NRK_ERROR;
+ 227:../../src/net/bmac/bmac.c **** 	}
+ 228:../../src/net/bmac/bmac.c ****     bmac_enable_signal=nrk_signal_create();
+ 229:../../src/net/bmac/bmac.c ****     if(bmac_enable_signal==NRK_ERROR)
+ 230:../../src/net/bmac/bmac.c **** 	{
+ 231:../../src/net/bmac/bmac.c **** 	nrk_kprintf(PSTR("BMAC ERROR: creating enable signal failed\r\n"));
+ 232:../../src/net/bmac/bmac.c **** 	nrk_kernel_error_add(NRK_SIGNAL_CREATE_ERROR,nrk_cur_task_TCB->task_ID);
+ 233:../../src/net/bmac/bmac.c **** 	return NRK_ERROR;
+ 234:../../src/net/bmac/bmac.c **** 	}
+ 235:../../src/net/bmac/bmac.c **** 
+ 236:../../src/net/bmac/bmac.c ****     
+ 237:../../src/net/bmac/bmac.c ****     tx_data_ready=0;
+ 238:../../src/net/bmac/bmac.c ****     // Set the one main rx buffer
+ 239:../../src/net/bmac/bmac.c ****     rx_buf_empty=0;
+ 240:../../src/net/bmac/bmac.c ****     bmac_rfRxInfo.pPayload = NULL;
+ 241:../../src/net/bmac/bmac.c ****     bmac_rfRxInfo.max_length = 0;
+ 242:../../src/net/bmac/bmac.c **** 
+ 243:../../src/net/bmac/bmac.c ****     // Setup the cc2420 chip
+ 244:../../src/net/bmac/bmac.c ****     rf_init (&bmac_rfRxInfo, chan, 0xffff, 0);
+ 245:../../src/net/bmac/bmac.c ****     g_chan=chan;
+ 246:../../src/net/bmac/bmac.c ****  
+ 247:../../src/net/bmac/bmac.c ****     FASTSPI_SETREG(CC2420_RSSI, 0xE580); // CCA THR=-25
+ 248:../../src/net/bmac/bmac.c ****     FASTSPI_SETREG(CC2420_TXCTRL, 0x80FF); // TX TURNAROUND = 128 us
+ 249:../../src/net/bmac/bmac.c ****     FASTSPI_SETREG(CC2420_RXCTRL1, 0x0A56); 
+ 250:../../src/net/bmac/bmac.c ****     // default cca thresh of -45
+ 251:../../src/net/bmac/bmac.c ****     rf_set_cca_thresh(-45); 
+ 252:../../src/net/bmac/bmac.c ****     bmac_running=1;
+ 253:../../src/net/bmac/bmac.c ****     is_enabled=1;
+ 254:../../src/net/bmac/bmac.c ****     return NRK_OK;
+ 255:../../src/net/bmac/bmac.c **** }
+ 256:../../src/net/bmac/bmac.c **** 
+ 257:../../src/net/bmac/bmac.c **** int8_t bmac_tx_pkt_nonblocking(uint8_t *buf, uint8_t len)
+ 258:../../src/net/bmac/bmac.c **** {
+ 302               	.LM15:
+ 303               	.LFBB7:
+ 304               	/* prologue: frame size=0 */
+ 305               	/* prologue end (size=0) */
+ 306 0048 9C01      		movw r18,r24
+ 259:../../src/net/bmac/bmac.c ****   if(tx_data_ready==1) return NRK_ERROR;
+ 308               	.LM16:
+ 309 004a 8091 0000 		lds r24,tx_data_ready
+ 310 004e 8130      		cpi r24,lo8(1)
+ 311 0050 01F4      		brne .L17
+ 313               	.LM17:
+ 314 0052 8FEF      		ldi r24,lo8(-1)
+ 315 0054 9FEF      		ldi r25,hi8(-1)
+ 316 0056 0895      		ret
+ 317               	.L17:
+ 260:../../src/net/bmac/bmac.c ****   tx_data_ready=1;
+ 319               	.LM18:
+ 320 0058 81E0      		ldi r24,lo8(1)
+ 321 005a 8093 0000 		sts tx_data_ready,r24
+ 261:../../src/net/bmac/bmac.c ****   bmac_rfTxInfo.pPayload=buf;
+ 323               	.LM19:
+ 324 005e 3093 0000 		sts (bmac_rfTxInfo+3)+1,r19
+ 325 0062 2093 0000 		sts bmac_rfTxInfo+3,r18
+ 262:../../src/net/bmac/bmac.c ****   bmac_rfTxInfo.length=len;
+ 327               	.LM20:
+ 328 0066 6093 0000 		sts bmac_rfTxInfo+2,r22
+ 329 006a 81E0      		ldi r24,lo8(1)
+ 330 006c 90E0      		ldi r25,hi8(1)
+ 263:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 264:../../src/net/bmac/bmac.c **** }
+ 332               	.LM21:
+ 333 006e 0895      		ret
+ 334               	/* epilogue: frame size=0 */
+ 335               	/* epilogue: noreturn */
+ 336               	/* epilogue end (size=0) */
+ 337               	/* function bmac_tx_pkt_nonblocking size 20 (20) */
+ 339               	.Lscope7:
+ 341               		.stabd	78,0,0
+ 343               	.global	bmac_rx_pkt_ready
+ 345               	bmac_rx_pkt_ready:
+ 346               		.stabd	46,0,0
+ 265:../../src/net/bmac/bmac.c **** 
+ 266:../../src/net/bmac/bmac.c **** nrk_sig_t bmac_get_rx_pkt_signal()
+ 267:../../src/net/bmac/bmac.c **** {
+ 268:../../src/net/bmac/bmac.c ****    nrk_signal_register(bmac_rx_pkt_signal); 
+ 269:../../src/net/bmac/bmac.c **** return(bmac_rx_pkt_signal);
+ 270:../../src/net/bmac/bmac.c **** }
+ 271:../../src/net/bmac/bmac.c **** 
+ 272:../../src/net/bmac/bmac.c **** nrk_sig_t bmac_get_tx_done_signal()
+ 273:../../src/net/bmac/bmac.c **** {
+ 274:../../src/net/bmac/bmac.c ****    nrk_signal_register(bmac_tx_pkt_done_signal); 
+ 275:../../src/net/bmac/bmac.c **** return(bmac_tx_pkt_done_signal);
+ 276:../../src/net/bmac/bmac.c **** }
+ 277:../../src/net/bmac/bmac.c **** 
+ 278:../../src/net/bmac/bmac.c **** 
+ 279:../../src/net/bmac/bmac.c **** int8_t bmac_tx_pkt(uint8_t *buf, uint8_t len)
+ 280:../../src/net/bmac/bmac.c **** {
+ 281:../../src/net/bmac/bmac.c **** uint32_t mask;
+ 282:../../src/net/bmac/bmac.c **** if(tx_data_ready==1) return NRK_ERROR;
+ 283:../../src/net/bmac/bmac.c **** // If reserve exists check it
+ 284:../../src/net/bmac/bmac.c **** #ifdef NRK_MAX_RESERVES
+ 285:../../src/net/bmac/bmac.c **** if(tx_reserve!=-1)
+ 286:../../src/net/bmac/bmac.c **** 	{
+ 287:../../src/net/bmac/bmac.c **** 	if( nrk_reserve_consume(tx_reserve)==NRK_ERROR ) return NRK_ERROR;
+ 288:../../src/net/bmac/bmac.c **** 	}
+ 289:../../src/net/bmac/bmac.c **** #endif
+ 290:../../src/net/bmac/bmac.c **** nrk_signal_register(bmac_tx_pkt_done_signal); 
+ 291:../../src/net/bmac/bmac.c **** tx_data_ready=1;
+ 292:../../src/net/bmac/bmac.c **** bmac_rfTxInfo.pPayload=buf;
+ 293:../../src/net/bmac/bmac.c **** bmac_rfTxInfo.length=len;
+ 294:../../src/net/bmac/bmac.c **** #ifdef DEBUG
+ 295:../../src/net/bmac/bmac.c **** nrk_kprintf( PSTR("Waiting for tx done signal\r\n"));
+ 296:../../src/net/bmac/bmac.c **** #endif
+ 297:../../src/net/bmac/bmac.c **** mask=nrk_event_wait (SIG(bmac_tx_pkt_done_signal));
+ 298:../../src/net/bmac/bmac.c **** if(pkt_got_ack) return NRK_OK;
+ 299:../../src/net/bmac/bmac.c **** return NRK_ERROR;
+ 300:../../src/net/bmac/bmac.c **** }
+ 301:../../src/net/bmac/bmac.c **** 
+ 302:../../src/net/bmac/bmac.c **** 
+ 303:../../src/net/bmac/bmac.c **** uint8_t *bmac_rx_pkt_get(uint8_t *len, int8_t *rssi)
+ 304:../../src/net/bmac/bmac.c **** {
+ 305:../../src/net/bmac/bmac.c **** 
+ 306:../../src/net/bmac/bmac.c ****   if(bmac_rx_pkt_ready()==0) 
+ 307:../../src/net/bmac/bmac.c **** 	{
+ 308:../../src/net/bmac/bmac.c **** 	*len=0;
+ 309:../../src/net/bmac/bmac.c **** 	*rssi=0;
+ 310:../../src/net/bmac/bmac.c **** 	return NULL;
+ 311:../../src/net/bmac/bmac.c **** 	}
+ 312:../../src/net/bmac/bmac.c ****   *len=bmac_rfRxInfo.length;
+ 313:../../src/net/bmac/bmac.c ****   *rssi=bmac_rfRxInfo.rssi;
+ 314:../../src/net/bmac/bmac.c ****   return bmac_rfRxInfo.pPayload;
+ 315:../../src/net/bmac/bmac.c **** }
+ 316:../../src/net/bmac/bmac.c **** 
+ 317:../../src/net/bmac/bmac.c **** int8_t bmac_rx_pkt_ready(void)
+ 318:../../src/net/bmac/bmac.c **** {
+ 348               	.LM22:
+ 349               	.LFBB8:
+ 350               	/* prologue: frame size=0 */
+ 351               	/* prologue end (size=0) */
+ 352 0070 20E0      		ldi r18,lo8(0)
+ 353 0072 30E0      		ldi r19,hi8(0)
+ 354 0074 8091 0000 		lds r24,rx_buf_empty
+ 355 0078 8823      		tst r24
+ 356 007a 01F4      		brne .L22
+ 358               	.LM23:
+ 359 007c 21E0      		ldi r18,lo8(1)
+ 360 007e 30E0      		ldi r19,hi8(1)
+ 361               	.L22:
+ 319:../../src/net/bmac/bmac.c **** return (!rx_buf_empty);
+ 320:../../src/net/bmac/bmac.c **** }
+ 363               	.LM24:
+ 364 0080 C901      		movw r24,r18
+ 365               	/* epilogue: frame size=0 */
+ 366 0082 0895      		ret
+ 367               	/* epilogue end (size=1) */
+ 368               	/* function bmac_rx_pkt_ready size 10 (9) */
+ 370               	.Lscope8:
+ 372               		.stabd	78,0,0
+ 374               	.global	bmac_rx_pkt_release
+ 376               	bmac_rx_pkt_release:
+ 377               		.stabd	46,0,0
+ 321:../../src/net/bmac/bmac.c **** 
+ 322:../../src/net/bmac/bmac.c **** int8_t bmac_rx_pkt_release(void)
+ 323:../../src/net/bmac/bmac.c **** {
+ 379               	.LM25:
+ 380               	.LFBB9:
+ 381               	/* prologue: frame size=0 */
+ 382               	/* prologue end (size=0) */
+ 324:../../src/net/bmac/bmac.c ****     rx_buf_empty=1;
+ 384               	.LM26:
+ 385 0084 81E0      		ldi r24,lo8(1)
+ 386 0086 8093 0000 		sts rx_buf_empty,r24
+ 325:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 326:../../src/net/bmac/bmac.c **** }
+ 388               	.LM27:
+ 389 008a 81E0      		ldi r24,lo8(1)
+ 390 008c 90E0      		ldi r25,hi8(1)
+ 391               	/* epilogue: frame size=0 */
+ 392 008e 0895      		ret
+ 393               	/* epilogue end (size=1) */
+ 394               	/* function bmac_rx_pkt_release size 6 (5) */
+ 396               	.Lscope9:
+ 398               		.stabd	78,0,0
+ 400               	.global	bmac_disable
+ 402               	bmac_disable:
+ 403               		.stabd	46,0,0
+ 327:../../src/net/bmac/bmac.c **** 
+ 328:../../src/net/bmac/bmac.c **** void bmac_disable()
+ 329:../../src/net/bmac/bmac.c **** {
+ 405               	.LM28:
+ 406               	.LFBB10:
+ 407               	/* prologue: frame size=0 */
+ 408               	/* prologue end (size=0) */
+ 330:../../src/net/bmac/bmac.c ****   is_enabled=0;
+ 410               	.LM29:
+ 411 0090 1092 0000 		sts is_enabled,__zero_reg__
+ 412               	/* epilogue: frame size=0 */
+ 413 0094 0895      		ret
+ 414               	/* epilogue end (size=1) */
+ 415               	/* function bmac_disable size 3 (2) */
+ 417               	.Lscope10:
+ 419               		.stabd	78,0,0
+ 422               	.global	bmac_set_rx_check_rate
+ 424               	bmac_set_rx_check_rate:
+ 425               		.stabd	46,0,0
+ 331:../../src/net/bmac/bmac.c **** }
+ 332:../../src/net/bmac/bmac.c **** 
+ 333:../../src/net/bmac/bmac.c **** void bmac_enable()
+ 334:../../src/net/bmac/bmac.c **** {
+ 335:../../src/net/bmac/bmac.c ****   is_enabled=1;
+ 336:../../src/net/bmac/bmac.c ****   nrk_event_signal (bmac_enable_signal);
+ 337:../../src/net/bmac/bmac.c **** }
+ 338:../../src/net/bmac/bmac.c **** 
+ 339:../../src/net/bmac/bmac.c **** 
+ 340:../../src/net/bmac/bmac.c **** void bmac_nw_task ()
+ 341:../../src/net/bmac/bmac.c **** {
+ 342:../../src/net/bmac/bmac.c **** int8_t v;
+ 343:../../src/net/bmac/bmac.c **** uint8_t backoff;
+ 344:../../src/net/bmac/bmac.c **** nrk_sig_mask_t event;
+ 345:../../src/net/bmac/bmac.c **** 
+ 346:../../src/net/bmac/bmac.c **** while(bmac_started()==0) nrk_wait_until_next_period();
+ 347:../../src/net/bmac/bmac.c **** 
+ 348:../../src/net/bmac/bmac.c **** //register the signal after bmac_init has been called
+ 349:../../src/net/bmac/bmac.c **** nrk_signal_register(bmac_enable_signal); 
+ 350:../../src/net/bmac/bmac.c **** 
+ 351:../../src/net/bmac/bmac.c **** backoff=0;
+ 352:../../src/net/bmac/bmac.c **** 
+ 353:../../src/net/bmac/bmac.c ****     while (1) {
+ 354:../../src/net/bmac/bmac.c **** 	if(is_enabled ) { 
+ 355:../../src/net/bmac/bmac.c **** 	v=1;
+ 356:../../src/net/bmac/bmac.c **** 	if(rx_buf_empty==1) v=_bmac_channel_check();
+ 357:../../src/net/bmac/bmac.c **** 		if(v==0)
+ 358:../../src/net/bmac/bmac.c **** 			{
+ 359:../../src/net/bmac/bmac.c **** 			if(_bmac_rx()==1)
+ 360:../../src/net/bmac/bmac.c **** 				nrk_event_signal (bmac_rx_pkt_signal);
+ 361:../../src/net/bmac/bmac.c **** 		
+ 362:../../src/net/bmac/bmac.c **** 			} 
+ 363:../../src/net/bmac/bmac.c **** 		if(tx_data_ready==1)
+ 364:../../src/net/bmac/bmac.c **** 			{
+ 365:../../src/net/bmac/bmac.c **** 				_bmac_tx();
+ 366:../../src/net/bmac/bmac.c **** 			}
+ 367:../../src/net/bmac/bmac.c **** 	nrk_wait(_bmac_check_period); 
+ 368:../../src/net/bmac/bmac.c **** 	} else {
+ 369:../../src/net/bmac/bmac.c **** 		event=0;
+ 370:../../src/net/bmac/bmac.c **** 		do {
+ 371:../../src/net/bmac/bmac.c ****     		event=nrk_event_wait (SIG(bmac_enable_signal));
+ 372:../../src/net/bmac/bmac.c **** 		} while((event & SIG(bmac_enable_signal))==0);
+ 373:../../src/net/bmac/bmac.c **** 	}
+ 374:../../src/net/bmac/bmac.c **** 	//nrk_wait_until_next_period();
+ 375:../../src/net/bmac/bmac.c **** 	}
+ 376:../../src/net/bmac/bmac.c **** 
+ 377:../../src/net/bmac/bmac.c **** }
+ 378:../../src/net/bmac/bmac.c **** 
+ 379:../../src/net/bmac/bmac.c **** 
+ 380:../../src/net/bmac/bmac.c **** int8_t bmac_set_rx_check_rate(nrk_time_t period)
+ 381:../../src/net/bmac/bmac.c **** {
+ 427               	.LM30:
+ 428               	.LFBB11:
+ 429               	/* prologue: frame size=8 */
+ 430 0096 CF93      		push r28
+ 431 0098 DF93      		push r29
+ 432 009a CDB7      		in r28,__SP_L__
+ 433 009c DEB7      		in r29,__SP_H__
+ 434 009e 2897      		sbiw r28,8
+ 435 00a0 0FB6      		in __tmp_reg__,__SREG__
+ 436 00a2 F894      		cli
+ 437 00a4 DEBF      		out __SP_H__,r29
+ 438 00a6 0FBE      		out __SREG__,__tmp_reg__
+ 439 00a8 CDBF      		out __SP_L__,r28
+ 440               	/* prologue end (size=10) */
+ 441 00aa 2983      		std Y+1,r18
+ 442 00ac 3A83      		std Y+2,r19
+ 443 00ae 4B83      		std Y+3,r20
+ 444 00b0 5C83      		std Y+4,r21
+ 445 00b2 6D83      		std Y+5,r22
+ 446 00b4 7E83      		std Y+6,r23
+ 447 00b6 8F83      		std Y+7,r24
+ 448 00b8 9887      		std Y+8,r25
+ 449 00ba 2D81      		ldd r18,Y+5
+ 450 00bc 3E81      		ldd r19,Y+6
+ 451 00be 4F81      		ldd r20,Y+7
+ 452 00c0 5885      		ldd r21,Y+8
+ 453 00c2 8981      		ldd r24,Y+1
+ 454 00c4 9A81      		ldd r25,Y+2
+ 455 00c6 AB81      		ldd r26,Y+3
+ 456 00c8 BC81      		ldd r27,Y+4
+ 382:../../src/net/bmac/bmac.c **** if(period.secs==0 && period.nano_secs < BMAC_MIN_CHECK_RATE_MS*NANOS_PER_MS)
+ 458               	.LM31:
+ 459 00ca 0097      		sbiw r24,0
+ 460 00cc A105      		cpc r26,__zero_reg__
+ 461 00ce B105      		cpc r27,__zero_reg__
+ 462 00d0 01F4      		brne .L29
+ 464               	.LM32:
+ 465 00d2 2030      		cpi r18,lo8(20000000)
+ 466 00d4 6DE2      		ldi r22,hi8(20000000)
+ 467 00d6 3607      		cpc r19,r22
+ 468 00d8 61E3      		ldi r22,hlo8(20000000)
+ 469 00da 4607      		cpc r20,r22
+ 470 00dc 61E0      		ldi r22,hhi8(20000000)
+ 471 00de 5607      		cpc r21,r22
+ 472 00e0 00F4      		brsh .L29
+ 473 00e2 8FEF      		ldi r24,lo8(-1)
+ 474 00e4 9FEF      		ldi r25,hi8(-1)
+ 475 00e6 00C0      		rjmp .L32
+ 476               	.L29:
+ 383:../../src/net/bmac/bmac.c **** 	return NRK_ERROR;
+ 384:../../src/net/bmac/bmac.c **** _bmac_check_period.secs=period.secs;
+ 478               	.LM33:
+ 479 00e8 8093 0000 		sts _bmac_check_period,r24
+ 480 00ec 9093 0000 		sts (_bmac_check_period)+1,r25
+ 481 00f0 A093 0000 		sts (_bmac_check_period)+2,r26
+ 482 00f4 B093 0000 		sts (_bmac_check_period)+3,r27
+ 385:../../src/net/bmac/bmac.c **** _bmac_check_period.nano_secs=period.nano_secs;
+ 484               	.LM34:
+ 485 00f8 2093 0000 		sts _bmac_check_period+4,r18
+ 486 00fc 3093 0000 		sts (_bmac_check_period+4)+1,r19
+ 487 0100 4093 0000 		sts (_bmac_check_period+4)+2,r20
+ 488 0104 5093 0000 		sts (_bmac_check_period+4)+3,r21
+ 489 0108 81E0      		ldi r24,lo8(1)
+ 490 010a 90E0      		ldi r25,hi8(1)
+ 491               	.L32:
+ 492               	/* epilogue: frame size=8 */
+ 493 010c 2896      		adiw r28,8
+ 494 010e 0FB6      		in __tmp_reg__,__SREG__
+ 495 0110 F894      		cli
+ 496 0112 DEBF      		out __SP_H__,r29
+ 497 0114 0FBE      		out __SREG__,__tmp_reg__
+ 498 0116 CDBF      		out __SP_L__,r28
+ 499 0118 DF91      		pop r29
+ 500 011a CF91      		pop r28
+ 501 011c 0895      		ret
+ 502               	/* epilogue end (size=9) */
+ 503               	/* function bmac_set_rx_check_rate size 68 (49) */
+ 505               	.Lscope11:
+ 507               		.stabd	78,0,0
+ 509               	.global	bmac_started
+ 511               	bmac_started:
+ 512               		.stabd	46,0,0
+ 386:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 387:../../src/net/bmac/bmac.c **** }
+ 388:../../src/net/bmac/bmac.c **** 
+ 389:../../src/net/bmac/bmac.c **** int8_t bmac_started()
+ 390:../../src/net/bmac/bmac.c **** {
+ 514               	.LM35:
+ 515               	.LFBB12:
+ 516               	/* prologue: frame size=0 */
+ 517               	/* prologue end (size=0) */
+ 518 011e 8091 0000 		lds r24,bmac_running
+ 391:../../src/net/bmac/bmac.c **** return bmac_running;
+ 392:../../src/net/bmac/bmac.c **** }
+ 520               	.LM36:
+ 521 0122 9927      		clr r25
+ 522 0124 87FD      		sbrc r24,7
+ 523 0126 9095      		com r25
+ 524               	/* epilogue: frame size=0 */
+ 525 0128 0895      		ret
+ 526               	/* epilogue end (size=1) */
+ 527               	/* function bmac_started size 6 (5) */
+ 529               	.Lscope12:
+ 531               		.stabd	78,0,0
+ 534               	.global	_b_pow
+ 536               	_b_pow:
+ 537               		.stabd	46,0,0
+ 393:../../src/net/bmac/bmac.c **** 
+ 394:../../src/net/bmac/bmac.c **** int8_t _bmac_channel_check()
+ 395:../../src/net/bmac/bmac.c **** {
+ 396:../../src/net/bmac/bmac.c **** int8_t val;
+ 397:../../src/net/bmac/bmac.c **** rf_polling_rx_on();
+ 398:../../src/net/bmac/bmac.c **** nrk_spin_wait_us(250);
+ 399:../../src/net/bmac/bmac.c **** val=CCA_IS_1;
+ 400:../../src/net/bmac/bmac.c **** rf_rx_off(); 	
+ 401:../../src/net/bmac/bmac.c **** return val;
+ 402:../../src/net/bmac/bmac.c **** 
+ 403:../../src/net/bmac/bmac.c **** }
+ 404:../../src/net/bmac/bmac.c **** 
+ 405:../../src/net/bmac/bmac.c **** int8_t _bmac_rx()
+ 406:../../src/net/bmac/bmac.c **** {
+ 407:../../src/net/bmac/bmac.c **** int8_t n;
+ 408:../../src/net/bmac/bmac.c **** uint8_t cnt;
+ 409:../../src/net/bmac/bmac.c **** 	
+ 410:../../src/net/bmac/bmac.c **** 	rf_set_rx (&bmac_rfRxInfo, g_chan);
+ 411:../../src/net/bmac/bmac.c ****         rf_polling_rx_on ();
+ 412:../../src/net/bmac/bmac.c **** 	cnt=0;
+ 413:../../src/net/bmac/bmac.c **** 	while ((n = rf_rx_check_fifop()) == 0)
+ 414:../../src/net/bmac/bmac.c **** 	{
+ 415:../../src/net/bmac/bmac.c **** 	cnt++;
+ 416:../../src/net/bmac/bmac.c **** 	nrk_wait(_bmac_check_period);
+ 417:../../src/net/bmac/bmac.c **** 	//nrk_wait_until_next_period();
+ 418:../../src/net/bmac/bmac.c **** 	if(cnt>3) { 
+ 419:../../src/net/bmac/bmac.c **** 			#ifdef DEBUG
+ 420:../../src/net/bmac/bmac.c **** 			printf( "rx timeout 1 %d\r\n",cnt );
+ 421:../../src/net/bmac/bmac.c **** 			#endif
+ 422:../../src/net/bmac/bmac.c **** 			rf_rx_off();
+ 423:../../src/net/bmac/bmac.c **** 			return 0;
+ 424:../../src/net/bmac/bmac.c **** 			} 
+ 425:../../src/net/bmac/bmac.c **** 	}
+ 426:../../src/net/bmac/bmac.c ****         if (n != 0) {
+ 427:../../src/net/bmac/bmac.c ****                 n = 0;
+ 428:../../src/net/bmac/bmac.c ****                 // Packet on its way
+ 429:../../src/net/bmac/bmac.c ****                 cnt=0;
+ 430:../../src/net/bmac/bmac.c ****                 while ((n = rf_polling_rx_packet ()) == 0) {
+ 431:../../src/net/bmac/bmac.c ****                 cnt++;
+ 432:../../src/net/bmac/bmac.c ****                 nrk_spin_wait_us(100);
+ 433:../../src/net/bmac/bmac.c ****                 if (cnt > 50) { 
+ 434:../../src/net/bmac/bmac.c **** 			#ifdef DEBUG
+ 435:../../src/net/bmac/bmac.c **** 			printf( "rx timeout 2\r\n" ); 
+ 436:../../src/net/bmac/bmac.c **** 			#endif
+ 437:../../src/net/bmac/bmac.c **** 			rf_rx_off(); 
+ 438:../../src/net/bmac/bmac.c **** 			return 0;
+ 439:../../src/net/bmac/bmac.c **** 			}        
+ 440:../../src/net/bmac/bmac.c ****                 }
+ 441:../../src/net/bmac/bmac.c ****         }
+ 442:../../src/net/bmac/bmac.c ****         rf_rx_off();
+ 443:../../src/net/bmac/bmac.c ****         if (n == 1) {
+ 444:../../src/net/bmac/bmac.c ****                 // CRC and checksum passed
+ 445:../../src/net/bmac/bmac.c ****     		rx_buf_empty=0;
+ 446:../../src/net/bmac/bmac.c **** 		#ifdef DEBUG
+ 447:../../src/net/bmac/bmac.c ****                 printf( "BMAC: SNR= %d [",bmac_rfRxInfo.rssi );
+ 448:../../src/net/bmac/bmac.c ****                 for(uint8_t i=0; i<bmac_rfRxInfo.length; i++ )
+ 449:../../src/net/bmac/bmac.c ****                         printf( "%c", bmac_rfRxInfo.pPayload[i]);
+ 450:../../src/net/bmac/bmac.c ****                 printf( "]\r\n" );
+ 451:../../src/net/bmac/bmac.c **** 		#endif
+ 452:../../src/net/bmac/bmac.c **** 		return 1;
+ 453:../../src/net/bmac/bmac.c ****         } else 
+ 454:../../src/net/bmac/bmac.c **** 	{
+ 455:../../src/net/bmac/bmac.c **** 	#ifdef DEBUG 
+ 456:../../src/net/bmac/bmac.c **** 	printf( "CRC failed!\r\n" );
+ 457:../../src/net/bmac/bmac.c **** 	#endif 
+ 458:../../src/net/bmac/bmac.c **** 	return 0; 
+ 459:../../src/net/bmac/bmac.c **** 	}
+ 460:../../src/net/bmac/bmac.c **** 
+ 461:../../src/net/bmac/bmac.c **** 
+ 462:../../src/net/bmac/bmac.c **** return 0;
+ 463:../../src/net/bmac/bmac.c **** }
+ 464:../../src/net/bmac/bmac.c **** 
+ 465:../../src/net/bmac/bmac.c **** 
+ 466:../../src/net/bmac/bmac.c **** int8_t _bmac_tx()
+ 467:../../src/net/bmac/bmac.c **** {
+ 468:../../src/net/bmac/bmac.c **** uint8_t v,backoff, backoff_count;
+ 469:../../src/net/bmac/bmac.c **** uint16_t b;
+ 470:../../src/net/bmac/bmac.c **** 
+ 471:../../src/net/bmac/bmac.c **** #ifdef DEBUG
+ 472:../../src/net/bmac/bmac.c **** nrk_kprintf( PSTR("_bmac_tx()\r\n"));
+ 473:../../src/net/bmac/bmac.c **** #endif
+ 474:../../src/net/bmac/bmac.c **** if(cca_active)
+ 475:../../src/net/bmac/bmac.c **** {
+ 476:../../src/net/bmac/bmac.c **** 
+ 477:../../src/net/bmac/bmac.c **** // Add random time here to stop nodes from synchronizing with eachother
+ 478:../../src/net/bmac/bmac.c **** b=_nrk_time_to_ticks(_bmac_check_period);
+ 479:../../src/net/bmac/bmac.c **** b=b/((rand()%10)+1);
+ 480:../../src/net/bmac/bmac.c **** //printf( "waiting %d\r\n",b );
+ 481:../../src/net/bmac/bmac.c **** nrk_wait_until_ticks(b);
+ 482:../../src/net/bmac/bmac.c **** //nrk_wait_ticks(b);
+ 483:../../src/net/bmac/bmac.c **** 
+ 484:../../src/net/bmac/bmac.c **** 	backoff_count=1;
+ 485:../../src/net/bmac/bmac.c **** 	do{
+ 486:../../src/net/bmac/bmac.c **** 	v=_bmac_channel_check();
+ 487:../../src/net/bmac/bmac.c **** 	if(v==1) break;
+ 488:../../src/net/bmac/bmac.c **** 	// Channel is busy
+ 489:../../src/net/bmac/bmac.c **** 	backoff=rand()%(_b_pow(backoff_count));
+ 490:../../src/net/bmac/bmac.c **** 			#ifdef DEBUG
+ 491:../../src/net/bmac/bmac.c **** 			printf( "backoff %d\r\n",backoff );
+ 492:../../src/net/bmac/bmac.c **** 			#endif
+ 493:../../src/net/bmac/bmac.c **** //	printf( "backoff %d\r\n",backoff );
+ 494:../../src/net/bmac/bmac.c **** 	nrk_wait_until_next_n_periods(backoff);
+ 495:../../src/net/bmac/bmac.c **** 	backoff_count++;
+ 496:../../src/net/bmac/bmac.c **** 	if(backoff_count>6) backoff_count=6; // cap it at 64	
+ 497:../../src/net/bmac/bmac.c **** 	b=_nrk_time_to_ticks(_bmac_check_period);
+ 498:../../src/net/bmac/bmac.c **** 	b=b/((rand()%10)+1);
+ 499:../../src/net/bmac/bmac.c **** //	printf( "waiting %d\r\n",b );
+ 500:../../src/net/bmac/bmac.c **** 	nrk_wait_until_ticks(b);
+ 501:../../src/net/bmac/bmac.c **** //	nrk_wait_ticks(b);
+ 502:../../src/net/bmac/bmac.c **** 
+ 503:../../src/net/bmac/bmac.c **** 	} while(v==0);
+ 504:../../src/net/bmac/bmac.c **** }
+ 505:../../src/net/bmac/bmac.c **** 
+ 506:../../src/net/bmac/bmac.c **** 	rf_test_mode();
+ 507:../../src/net/bmac/bmac.c **** 	rf_carrier_on(); 
+ 508:../../src/net/bmac/bmac.c **** 	nrk_wait(_bmac_check_period);
+ 509:../../src/net/bmac/bmac.c **** 	//nrk_wait_until_next_period();
+ 510:../../src/net/bmac/bmac.c **** 	rf_carrier_off(); 
+ 511:../../src/net/bmac/bmac.c **** 	rf_data_mode();
+ 512:../../src/net/bmac/bmac.c **** 	// send packet
+ 513:../../src/net/bmac/bmac.c **** 	rf_rx_off();
+ 514:../../src/net/bmac/bmac.c **** 	pkt_got_ack=rf_tx_packet (&bmac_rfTxInfo);
+ 515:../../src/net/bmac/bmac.c **** 	rf_rx_off(); 	
+ 516:../../src/net/bmac/bmac.c **** tx_data_ready=0;
+ 517:../../src/net/bmac/bmac.c **** nrk_event_signal (bmac_tx_pkt_done_signal);
+ 518:../../src/net/bmac/bmac.c **** return NRK_OK;
+ 519:../../src/net/bmac/bmac.c **** }
+ 520:../../src/net/bmac/bmac.c **** 
+ 521:../../src/net/bmac/bmac.c **** uint8_t _b_pow(uint8_t in)
+ 522:../../src/net/bmac/bmac.c **** {
+ 539               	.LM37:
+ 540               	.LFBB13:
+ 541               	/* prologue: frame size=0 */
+ 542               	/* prologue end (size=0) */
+ 523:../../src/net/bmac/bmac.c **** uint8_t i;
+ 524:../../src/net/bmac/bmac.c **** uint8_t result;
+ 525:../../src/net/bmac/bmac.c **** if(in<=1) return 1;
+ 544               	.LM38:
+ 545 012a 8230      		cpi r24,lo8(2)
+ 546 012c 00F4      		brsh .L37
+ 548               	.LM39:
+ 549 012e 81E0      		ldi r24,lo8(1)
+ 550 0130 90E0      		ldi r25,hi8(1)
+ 551 0132 0895      		ret
+ 552               	.L37:
+ 526:../../src/net/bmac/bmac.c **** if(in>7) in=6; // cap it at 128 
+ 554               	.LM40:
+ 555 0134 8830      		cpi r24,lo8(8)
+ 556 0136 00F0      		brlo .L40
+ 557 0138 86E0      		ldi r24,lo8(6)
+ 558               	.L40:
+ 559 013a 91E0      		ldi r25,lo8(1)
+ 560 013c 20E0      		ldi r18,lo8(0)
+ 561 013e 30E0      		ldi r19,hi8(0)
+ 562               	.L42:
+ 527:../../src/net/bmac/bmac.c **** result=1;
+ 528:../../src/net/bmac/bmac.c **** for(i=0; i<in; i++ )
+ 529:../../src/net/bmac/bmac.c ****   result=result*2;
+ 564               	.LM41:
+ 565 0140 990F      		lsl r25
+ 566 0142 2F5F      		subi r18,lo8(-(1))
+ 567 0144 3F4F      		sbci r19,hi8(-(1))
+ 569               	.LM42:
+ 570 0146 2817      		cp r18,r24
+ 571 0148 00F0      		brlo .L42
+ 530:../../src/net/bmac/bmac.c **** return result;
+ 573               	.LM43:
+ 574 014a 892F      		mov r24,r25
+ 575 014c 9927      		clr r25
+ 531:../../src/net/bmac/bmac.c **** }
+ 577               	.LM44:
+ 578 014e 0895      		ret
+ 579               	/* epilogue: frame size=0 */
+ 580               	/* epilogue: noreturn */
+ 581               	/* epilogue end (size=0) */
+ 582               	/* function _b_pow size 19 (19) */
+ 587               	.Lscope13:
+ 589               		.stabd	78,0,0
+ 591               	.global	bmac_task_config
+ 593               	bmac_task_config:
+ 594               		.stabd	46,0,0
+ 532:../../src/net/bmac/bmac.c **** 
+ 533:../../src/net/bmac/bmac.c **** 
+ 534:../../src/net/bmac/bmac.c **** void bmac_task_config ()
+ 535:../../src/net/bmac/bmac.c **** {
+ 596               	.LM45:
+ 597               	.LFBB14:
+ 598               	/* prologue: frame size=0 */
+ 599 0150 0F93      		push r16
+ 600 0152 1F93      		push r17
+ 601               	/* prologue end (size=2) */
+ 536:../../src/net/bmac/bmac.c ****     nrk_task_set_entry_function( &bmac_task, bmac_nw_task);
+ 603               	.LM46:
+ 604 0154 00E0      		ldi r16,lo8(bmac_task)
+ 605 0156 10E0      		ldi r17,hi8(bmac_task)
+ 606 0158 60E0      		ldi r22,lo8(pm(bmac_nw_task))
+ 607 015a 70E0      		ldi r23,hi8(pm(bmac_nw_task))
+ 608 015c C801      		movw r24,r16
+ 609 015e 0E94 0000 		call nrk_task_set_entry_function
+ 537:../../src/net/bmac/bmac.c ****     nrk_task_set_stk( &bmac_task, bmac_task_stack, BMAC_STACK_SIZE);
+ 611               	.LM47:
+ 612 0162 40E8      		ldi r20,lo8(128)
+ 613 0164 50E0      		ldi r21,hi8(128)
+ 614 0166 60E0      		ldi r22,lo8(bmac_task_stack)
+ 615 0168 70E0      		ldi r23,hi8(bmac_task_stack)
+ 616 016a C801      		movw r24,r16
+ 617 016c 0E94 0000 		call nrk_task_set_stk
+ 538:../../src/net/bmac/bmac.c ****     bmac_task.prio = BMAC_TASK_PRIORITY;
+ 619               	.LM48:
+ 620 0170 84E1      		ldi r24,lo8(20)
+ 621 0172 8093 0000 		sts bmac_task+8,r24
+ 539:../../src/net/bmac/bmac.c ****     bmac_task.FirstActivation = TRUE;
+ 623               	.LM49:
+ 624 0176 81E0      		ldi r24,lo8(1)
+ 625 0178 8093 0000 		sts bmac_task+7,r24
+ 540:../../src/net/bmac/bmac.c ****     bmac_task.Type = BASIC_TASK;
+ 627               	.LM50:
+ 628 017c 8093 0000 		sts bmac_task+9,r24
+ 541:../../src/net/bmac/bmac.c ****     bmac_task.SchType = PREEMPTIVE;
+ 630               	.LM51:
+ 631 0180 8093 0000 		sts bmac_task+10,r24
+ 542:../../src/net/bmac/bmac.c ****     bmac_task.period.secs = 0;
+ 633               	.LM52:
+ 634 0184 1092 0000 		sts bmac_task+11,__zero_reg__
+ 635 0188 1092 0000 		sts (bmac_task+11)+1,__zero_reg__
+ 636 018c 1092 0000 		sts (bmac_task+11)+2,__zero_reg__
+ 637 0190 1092 0000 		sts (bmac_task+11)+3,__zero_reg__
+ 543:../../src/net/bmac/bmac.c ****     bmac_task.period.nano_secs = BMAC_MIN_CHECK_RATE_MS * NANOS_PER_MS;
+ 639               	.LM53:
+ 640 0194 80E0      		ldi r24,lo8(20000000)
+ 641 0196 9DE2      		ldi r25,hi8(20000000)
+ 642 0198 A1E3      		ldi r26,hlo8(20000000)
+ 643 019a B1E0      		ldi r27,hhi8(20000000)
+ 644 019c 8093 0000 		sts bmac_task+15,r24
+ 645 01a0 9093 0000 		sts (bmac_task+15)+1,r25
+ 646 01a4 A093 0000 		sts (bmac_task+15)+2,r26
+ 647 01a8 B093 0000 		sts (bmac_task+15)+3,r27
+ 544:../../src/net/bmac/bmac.c ****     bmac_task.cpu_reserve.secs = 10;      // bmac reserve , 0 to disable
+ 649               	.LM54:
+ 650 01ac 8AE0      		ldi r24,lo8(10)
+ 651 01ae 90E0      		ldi r25,hi8(10)
+ 652 01b0 A0E0      		ldi r26,hlo8(10)
+ 653 01b2 B0E0      		ldi r27,hhi8(10)
+ 654 01b4 8093 0000 		sts bmac_task+19,r24
+ 655 01b8 9093 0000 		sts (bmac_task+19)+1,r25
+ 656 01bc A093 0000 		sts (bmac_task+19)+2,r26
+ 657 01c0 B093 0000 		sts (bmac_task+19)+3,r27
+ 545:../../src/net/bmac/bmac.c ****     bmac_task.cpu_reserve.nano_secs = 0;
+ 659               	.LM55:
+ 660 01c4 1092 0000 		sts bmac_task+23,__zero_reg__
+ 661 01c8 1092 0000 		sts (bmac_task+23)+1,__zero_reg__
+ 662 01cc 1092 0000 		sts (bmac_task+23)+2,__zero_reg__
+ 663 01d0 1092 0000 		sts (bmac_task+23)+3,__zero_reg__
+ 546:../../src/net/bmac/bmac.c ****     bmac_task.offset.secs = 0;
+ 665               	.LM56:
+ 666 01d4 1092 0000 		sts bmac_task+27,__zero_reg__
+ 667 01d8 1092 0000 		sts (bmac_task+27)+1,__zero_reg__
+ 668 01dc 1092 0000 		sts (bmac_task+27)+2,__zero_reg__
+ 669 01e0 1092 0000 		sts (bmac_task+27)+3,__zero_reg__
+ 547:../../src/net/bmac/bmac.c ****     bmac_task.offset.nano_secs = 0;
+ 671               	.LM57:
+ 672 01e4 1092 0000 		sts bmac_task+31,__zero_reg__
+ 673 01e8 1092 0000 		sts (bmac_task+31)+1,__zero_reg__
+ 674 01ec 1092 0000 		sts (bmac_task+31)+2,__zero_reg__
+ 675 01f0 1092 0000 		sts (bmac_task+31)+3,__zero_reg__
+ 548:../../src/net/bmac/bmac.c ****     #ifdef DEBUG
+ 549:../../src/net/bmac/bmac.c ****     printf( "bmac activate\r\n" );
+ 550:../../src/net/bmac/bmac.c ****     #endif 
+ 551:../../src/net/bmac/bmac.c ****     nrk_activate_task (&bmac_task);
+ 677               	.LM58:
+ 678 01f4 C801      		movw r24,r16
+ 679 01f6 0E94 0000 		call nrk_activate_task
+ 680               	/* epilogue: frame size=0 */
+ 681 01fa 1F91      		pop r17
+ 682 01fc 0F91      		pop r16
+ 683 01fe 0895      		ret
+ 684               	/* epilogue end (size=3) */
+ 685               	/* function bmac_task_config size 88 (83) */
+ 687               	.Lscope14:
+ 689               		.stabd	78,0,0
+ 691               	.global	bmac_enable
+ 693               	bmac_enable:
+ 694               		.stabd	46,0,0
+ 696               	.LM59:
+ 697               	.LFBB15:
+ 698               	/* prologue: frame size=0 */
+ 699               	/* prologue end (size=0) */
+ 701               	.LM60:
+ 702 0200 81E0      		ldi r24,lo8(1)
+ 703 0202 8093 0000 		sts is_enabled,r24
+ 705               	.LM61:
+ 706 0206 8091 0000 		lds r24,bmac_enable_signal
+ 707 020a 0E94 0000 		call nrk_event_signal
+ 708               	/* epilogue: frame size=0 */
+ 709 020e 0895      		ret
+ 710               	/* epilogue end (size=1) */
+ 711               	/* function bmac_enable size 8 (7) */
+ 713               	.Lscope15:
+ 715               		.stabd	78,0,0
+ 717               	.global	_bmac_channel_check
+ 719               	_bmac_channel_check:
+ 720               		.stabd	46,0,0
+ 722               	.LM62:
+ 723               	.LFBB16:
+ 724               	/* prologue: frame size=0 */
+ 725 0210 0F93      		push r16
+ 726 0212 1F93      		push r17
+ 727               	/* prologue end (size=2) */
+ 729               	.LM63:
+ 730 0214 0E94 0000 		call rf_polling_rx_on
+ 732               	.LM64:
+ 733 0218 8AEF      		ldi r24,lo8(250)
+ 734 021a 90E0      		ldi r25,hi8(250)
+ 735 021c 0E94 0000 		call nrk_spin_wait_us
+ 737               	.LM65:
+ 738 0220 09B1      		in r16,41-0x20
+ 740               	.LM66:
+ 741 0222 0E94 0000 		call rf_rx_off
+ 742 0226 1127      		clr r17
+ 743 0228 84E0      		ldi r24,4
+ 744 022a 1695      	1:	lsr r17
+ 745 022c 0795      		ror r16
+ 746 022e 8A95      		dec r24
+ 747 0230 01F4      		brne 1b
+ 749               	.LM67:
+ 750 0232 C801      		movw r24,r16
+ 751 0234 8170      		andi r24,lo8(1)
+ 752 0236 9070      		andi r25,hi8(1)
+ 753               	/* epilogue: frame size=0 */
+ 754 0238 1F91      		pop r17
+ 755 023a 0F91      		pop r16
+ 756 023c 0895      		ret
+ 757               	/* epilogue end (size=3) */
+ 758               	/* function _bmac_channel_check size 23 (18) */
+ 760               	.Lscope16:
+ 762               		.stabd	78,0,0
+ 764               	.global	_bmac_tx
+ 766               	_bmac_tx:
+ 767               		.stabd	46,0,0
+ 769               	.LM68:
+ 770               	.LFBB17:
+ 771               	/* prologue: frame size=0 */
+ 772 023e EF92      		push r14
+ 773 0240 FF92      		push r15
+ 774 0242 0F93      		push r16
+ 775 0244 1F93      		push r17
+ 776               	/* prologue end (size=4) */
+ 778               	.LM69:
+ 779 0246 8091 0000 		lds r24,cca_active
+ 780 024a 8823      		tst r24
+ 781 024c 01F4      		brne .+2
+ 782 024e 00C0      		rjmp .L54
+ 784               	.LM70:
+ 785 0250 2091 0000 		lds r18,_bmac_check_period
+ 786 0254 3091 0000 		lds r19,_bmac_check_period+1
+ 787 0258 4091 0000 		lds r20,_bmac_check_period+2
+ 788 025c 5091 0000 		lds r21,_bmac_check_period+3
+ 789 0260 6091 0000 		lds r22,_bmac_check_period+4
+ 790 0264 7091 0000 		lds r23,_bmac_check_period+5
+ 791 0268 8091 0000 		lds r24,_bmac_check_period+6
+ 792 026c 9091 0000 		lds r25,_bmac_check_period+7
+ 793 0270 0E94 0000 		call _nrk_time_to_ticks
+ 794 0274 8C01      		movw r16,r24
+ 796               	.LM71:
+ 797 0276 0E94 0000 		call rand
+ 799               	.LM72:
+ 800 027a 6AE0      		ldi r22,lo8(10)
+ 801 027c 70E0      		ldi r23,hi8(10)
+ 802 027e 0E94 0000 		call __divmodhi4
+ 803 0282 BC01      		movw r22,r24
+ 804 0284 6F5F      		subi r22,lo8(-(1))
+ 805 0286 7F4F      		sbci r23,hi8(-(1))
+ 806 0288 C801      		movw r24,r16
+ 807 028a 0E94 0000 		call __udivmodhi4
+ 808 028e CB01      		movw r24,r22
+ 809 0290 0E94 0000 		call nrk_wait_until_ticks
+ 810 0294 FF24      		clr r15
+ 811 0296 F394      		inc r15
+ 812               	.L64:
+ 814               	.LM73:
+ 815 0298 0E94 0000 		call _bmac_channel_check
+ 816 029c E82E      		mov r14,r24
+ 818               	.LM74:
+ 819 029e 81E0      		ldi r24,lo8(1)
+ 820 02a0 E816      		cp r14,r24
+ 821 02a2 01F0      		breq .L54
+ 823               	.LM75:
+ 824 02a4 0E94 0000 		call rand
+ 825 02a8 8C01      		movw r16,r24
+ 826 02aa 8F2D      		mov r24,r15
+ 827 02ac 0E94 0000 		call _b_pow
+ 829               	.LM76:
+ 830 02b0 682F      		mov r22,r24
+ 831 02b2 7727      		clr r23
+ 832 02b4 C801      		movw r24,r16
+ 833 02b6 0E94 0000 		call __divmodhi4
+ 834 02ba 9927      		clr r25
+ 835 02bc 0E94 0000 		call nrk_wait_until_next_n_periods
+ 837               	.LM77:
+ 838 02c0 2091 0000 		lds r18,_bmac_check_period
+ 839 02c4 3091 0000 		lds r19,_bmac_check_period+1
+ 840 02c8 4091 0000 		lds r20,_bmac_check_period+2
+ 841 02cc 5091 0000 		lds r21,_bmac_check_period+3
+ 842 02d0 6091 0000 		lds r22,_bmac_check_period+4
+ 843 02d4 7091 0000 		lds r23,_bmac_check_period+5
+ 844 02d8 8091 0000 		lds r24,_bmac_check_period+6
+ 845 02dc 9091 0000 		lds r25,_bmac_check_period+7
+ 846 02e0 0E94 0000 		call _nrk_time_to_ticks
+ 847 02e4 8C01      		movw r16,r24
+ 849               	.LM78:
+ 850 02e6 0E94 0000 		call rand
+ 852               	.LM79:
+ 853 02ea 6AE0      		ldi r22,lo8(10)
+ 854 02ec 70E0      		ldi r23,hi8(10)
+ 855 02ee 0E94 0000 		call __divmodhi4
+ 856 02f2 BC01      		movw r22,r24
+ 857 02f4 6F5F      		subi r22,lo8(-(1))
+ 858 02f6 7F4F      		sbci r23,hi8(-(1))
+ 859 02f8 C801      		movw r24,r16
+ 860 02fa 0E94 0000 		call __udivmodhi4
+ 861 02fe CB01      		movw r24,r22
+ 862 0300 0E94 0000 		call nrk_wait_until_ticks
+ 864               	.LM80:
+ 865 0304 EE20      		tst r14
+ 866 0306 01F4      		brne .L54
+ 868               	.LM81:
+ 869 0308 F394      		inc r15
+ 870 030a 86E0      		ldi r24,lo8(6)
+ 871 030c 8F15      		cp r24,r15
+ 872 030e 00F4      		brsh .L64
+ 873 0310 96E0      		ldi r25,lo8(6)
+ 874 0312 F92E      		mov r15,r25
+ 875 0314 00C0      		rjmp .L64
+ 876               	.L54:
+ 878               	.LM82:
+ 879 0316 0E94 0000 		call rf_test_mode
+ 881               	.LM83:
+ 882 031a 0E94 0000 		call rf_carrier_on
+ 884               	.LM84:
+ 885 031e 2091 0000 		lds r18,_bmac_check_period
+ 886 0322 3091 0000 		lds r19,_bmac_check_period+1
+ 887 0326 4091 0000 		lds r20,_bmac_check_period+2
+ 888 032a 5091 0000 		lds r21,_bmac_check_period+3
+ 889 032e 6091 0000 		lds r22,_bmac_check_period+4
+ 890 0332 7091 0000 		lds r23,_bmac_check_period+5
+ 891 0336 8091 0000 		lds r24,_bmac_check_period+6
+ 892 033a 9091 0000 		lds r25,_bmac_check_period+7
+ 893 033e 0E94 0000 		call nrk_wait
+ 895               	.LM85:
+ 896 0342 0E94 0000 		call rf_carrier_off
+ 898               	.LM86:
+ 899 0346 0E94 0000 		call rf_data_mode
+ 901               	.LM87:
+ 902 034a 0E94 0000 		call rf_rx_off
+ 904               	.LM88:
+ 905 034e 80E0      		ldi r24,lo8(bmac_rfTxInfo)
+ 906 0350 90E0      		ldi r25,hi8(bmac_rfTxInfo)
+ 907 0352 0E94 0000 		call rf_tx_packet
+ 908 0356 8093 0000 		sts pkt_got_ack,r24
+ 910               	.LM89:
+ 911 035a 0E94 0000 		call rf_rx_off
+ 913               	.LM90:
+ 914 035e 1092 0000 		sts tx_data_ready,__zero_reg__
+ 916               	.LM91:
+ 917 0362 8091 0000 		lds r24,bmac_tx_pkt_done_signal
+ 918 0366 0E94 0000 		call nrk_event_signal
+ 920               	.LM92:
+ 921 036a 81E0      		ldi r24,lo8(1)
+ 922 036c 90E0      		ldi r25,hi8(1)
+ 923               	/* epilogue: frame size=0 */
+ 924 036e 1F91      		pop r17
+ 925 0370 0F91      		pop r16
+ 926 0372 FF90      		pop r15
+ 927 0374 EF90      		pop r14
+ 928 0376 0895      		ret
+ 929               	/* epilogue end (size=5) */
+ 930               	/* function _bmac_tx size 157 (148) */
+ 936               	.Lscope17:
+ 938               		.stabd	78,0,0
+ 940               	.global	_bmac_rx
+ 942               	_bmac_rx:
+ 943               		.stabd	46,0,0
+ 945               	.LM93:
+ 946               	.LFBB18:
+ 947               	/* prologue: frame size=0 */
+ 948 0378 0F93      		push r16
+ 949 037a 1F93      		push r17
+ 950               	/* prologue end (size=2) */
+ 952               	.LM94:
+ 953 037c 6091 0000 		lds r22,g_chan
+ 954 0380 80E0      		ldi r24,lo8(bmac_rfRxInfo)
+ 955 0382 90E0      		ldi r25,hi8(bmac_rfRxInfo)
+ 956 0384 0E94 0000 		call rf_set_rx
+ 958               	.LM95:
+ 959 0388 0E94 0000 		call rf_polling_rx_on
+ 960 038c 10E0      		ldi r17,lo8(0)
+ 961 038e 00C0      		rjmp .L66
+ 962               	.L67:
+ 964               	.LM96:
+ 965 0390 1F5F      		subi r17,lo8(-(1))
+ 967               	.LM97:
+ 968 0392 2091 0000 		lds r18,_bmac_check_period
+ 969 0396 3091 0000 		lds r19,_bmac_check_period+1
+ 970 039a 4091 0000 		lds r20,_bmac_check_period+2
+ 971 039e 5091 0000 		lds r21,_bmac_check_period+3
+ 972 03a2 6091 0000 		lds r22,_bmac_check_period+4
+ 973 03a6 7091 0000 		lds r23,_bmac_check_period+5
+ 974 03aa 8091 0000 		lds r24,_bmac_check_period+6
+ 975 03ae 9091 0000 		lds r25,_bmac_check_period+7
+ 976 03b2 0E94 0000 		call nrk_wait
+ 978               	.LM98:
+ 979 03b6 1430      		cpi r17,lo8(4)
+ 980 03b8 01F0      		breq .L84
+ 981               	.L66:
+ 983               	.LM99:
+ 984 03ba 0E94 0000 		call rf_rx_check_fifop
+ 985 03be 8823      		tst r24
+ 986 03c0 01F0      		breq .L67
+ 987 03c2 00C0      		rjmp .L81
+ 988               	.L71:
+ 990               	.LM100:
+ 991 03c4 1F5F      		subi r17,lo8(-(1))
+ 993               	.LM101:
+ 994 03c6 84E6      		ldi r24,lo8(100)
+ 995 03c8 90E0      		ldi r25,hi8(100)
+ 996 03ca 0E94 0000 		call nrk_spin_wait_us
+ 998               	.LM102:
+ 999 03ce 1333      		cpi r17,lo8(51)
+ 1000 03d0 01F4      		brne .L72
+ 1001               	.L84:
+ 1003               	.LM103:
+ 1004 03d2 0E94 0000 		call rf_rx_off
+ 1005 03d6 00C0      		rjmp .L83
+ 1006               	.L81:
+ 1008               	.LM104:
+ 1009 03d8 10E0      		ldi r17,lo8(0)
+ 1010               	.L72:
+ 1012               	.LM105:
+ 1013 03da 0E94 0000 		call rf_polling_rx_packet
+ 1014 03de 082F      		mov r16,r24
+ 1015 03e0 8823      		tst r24
+ 1016 03e2 01F0      		breq .L71
+ 1018               	.LM106:
+ 1019 03e4 0E94 0000 		call rf_rx_off
+ 1021               	.LM107:
+ 1022 03e8 0130      		cpi r16,lo8(1)
+ 1023 03ea 01F0      		breq .L75
+ 1024               	.L83:
+ 1025 03ec 80E0      		ldi r24,lo8(0)
+ 1026 03ee 90E0      		ldi r25,hi8(0)
+ 1027 03f0 00C0      		rjmp .L69
+ 1028               	.L75:
+ 1030               	.LM108:
+ 1031 03f2 1092 0000 		sts rx_buf_empty,__zero_reg__
+ 1032 03f6 81E0      		ldi r24,lo8(1)
+ 1033 03f8 90E0      		ldi r25,hi8(1)
+ 1034               	.L69:
+ 1035               	/* epilogue: frame size=0 */
+ 1036 03fa 1F91      		pop r17
+ 1037 03fc 0F91      		pop r16
+ 1038 03fe 0895      		ret
+ 1039               	/* epilogue end (size=3) */
+ 1040               	/* function _bmac_rx size 68 (63) */
+ 1046               	.Lscope18:
+ 1048               		.stabd	78,0,0
+ 1050               	.global	bmac_get_tx_done_signal
+ 1052               	bmac_get_tx_done_signal:
+ 1053               		.stabd	46,0,0
+ 1055               	.LM109:
+ 1056               	.LFBB19:
+ 1057               	/* prologue: frame size=0 */
+ 1058               	/* prologue end (size=0) */
+ 1060               	.LM110:
+ 1061 0400 8091 0000 		lds r24,bmac_tx_pkt_done_signal
+ 1062 0404 0E94 0000 		call nrk_signal_register
+ 1063 0408 8091 0000 		lds r24,bmac_tx_pkt_done_signal
+ 1065               	.LM111:
+ 1066 040c 9927      		clr r25
+ 1067 040e 87FD      		sbrc r24,7
+ 1068 0410 9095      		com r25
+ 1069               	/* epilogue: frame size=0 */
+ 1070 0412 0895      		ret
+ 1071               	/* epilogue end (size=1) */
+ 1072               	/* function bmac_get_tx_done_signal size 10 (9) */
+ 1074               	.Lscope19:
+ 1076               		.stabd	78,0,0
+ 1078               	.global	bmac_get_rx_pkt_signal
+ 1080               	bmac_get_rx_pkt_signal:
+ 1081               		.stabd	46,0,0
+ 1083               	.LM112:
+ 1084               	.LFBB20:
+ 1085               	/* prologue: frame size=0 */
+ 1086               	/* prologue end (size=0) */
+ 1088               	.LM113:
+ 1089 0414 8091 0000 		lds r24,bmac_rx_pkt_signal
+ 1090 0418 0E94 0000 		call nrk_signal_register
+ 1091 041c 8091 0000 		lds r24,bmac_rx_pkt_signal
+ 1093               	.LM114:
+ 1094 0420 9927      		clr r25
+ 1095 0422 87FD      		sbrc r24,7
+ 1096 0424 9095      		com r25
+ 1097               	/* epilogue: frame size=0 */
+ 1098 0426 0895      		ret
+ 1099               	/* epilogue end (size=1) */
+ 1100               	/* function bmac_get_rx_pkt_signal size 10 (9) */
+ 1102               	.Lscope20:
+ 1104               		.stabd	78,0,0
+ 1106               	.global	bmac_wait_until_rx_pkt
+ 1108               	bmac_wait_until_rx_pkt:
+ 1109               		.stabd	46,0,0
+ 1111               	.LM115:
+ 1112               	.LFBB21:
+ 1113               	/* prologue: frame size=0 */
+ 1114               	/* prologue end (size=0) */
+ 1116               	.LM116:
+ 1117 0428 8091 0000 		lds r24,bmac_rx_pkt_signal
+ 1118 042c 0E94 0000 		call nrk_signal_register
+ 1120               	.LM117:
+ 1121 0430 61E0      		ldi r22,lo8(1)
+ 1122 0432 70E0      		ldi r23,hi8(1)
+ 1123 0434 80E0      		ldi r24,hlo8(1)
+ 1124 0436 90E0      		ldi r25,hhi8(1)
+ 1125 0438 0090 0000 		lds r0,bmac_rx_pkt_signal
+ 1126 043c 00C0      		rjmp 2f
+ 1127 043e 660F      	1:	lsl r22
+ 1128 0440 771F      		rol r23
+ 1129 0442 881F      		rol r24
+ 1130 0444 991F      		rol r25
+ 1131 0446 0A94      	2:	dec r0
+ 1132 0448 02F4      		brpl 1b
+ 1133 044a 0E94 0000 		call nrk_event_wait
+ 1135               	.LM118:
+ 1136 044e 0090 0000 		lds r0,bmac_rx_pkt_signal
+ 1137 0452 00C0      		rjmp 2f
+ 1138 0454 9695      	1:	lsr r25
+ 1139 0456 8795      		ror r24
+ 1140 0458 7795      		ror r23
+ 1141 045a 6795      		ror r22
+ 1142 045c 0A94      	2:	dec r0
+ 1143 045e 02F4      		brpl 1b
+ 1144 0460 60FD      		sbrc r22,0
+ 1145 0462 00C0      		rjmp .L90
+ 1147               	.LM119:
+ 1148 0464 8FEF      		ldi r24,lo8(-1)
+ 1149 0466 9FEF      		ldi r25,hi8(-1)
+ 1150 0468 0895      		ret
+ 1151               	.L90:
+ 1152 046a 81E0      		ldi r24,lo8(1)
+ 1153 046c 90E0      		ldi r25,hi8(1)
+ 1155               	.LM120:
+ 1156 046e 0895      		ret
+ 1157               	/* epilogue: frame size=0 */
+ 1158               	/* epilogue: noreturn */
+ 1159               	/* epilogue end (size=0) */
+ 1160               	/* function bmac_wait_until_rx_pkt size 36 (36) */
+ 1162               	.Lscope21:
+ 1164               		.stabd	78,0,0
+ 1168               	.global	bmac_tx_pkt
+ 1170               	bmac_tx_pkt:
+ 1171               		.stabd	46,0,0
+ 1173               	.LM121:
+ 1174               	.LFBB22:
+ 1175               	/* prologue: frame size=0 */
+ 1176 0470 1F93      		push r17
+ 1177 0472 CF93      		push r28
+ 1178 0474 DF93      		push r29
+ 1179               	/* prologue end (size=3) */
+ 1180 0476 EC01      		movw r28,r24
+ 1181 0478 162F      		mov r17,r22
+ 1183               	.LM122:
+ 1184 047a 8091 0000 		lds r24,tx_data_ready
+ 1185 047e 8130      		cpi r24,lo8(1)
+ 1186 0480 01F0      		breq .L95
+ 1188               	.LM123:
+ 1189 0482 8091 0000 		lds r24,tx_reserve
+ 1190 0486 8F3F      		cpi r24,lo8(-1)
+ 1191 0488 01F0      		breq .L97
+ 1193               	.LM124:
+ 1194 048a 9927      		clr r25
+ 1195 048c 87FD      		sbrc r24,7
+ 1196 048e 9095      		com r25
+ 1197 0490 0E94 0000 		call nrk_reserve_consume
+ 1198 0494 8F5F      		subi r24,lo8(-1)
+ 1199 0496 9F4F      		sbci r25,hi8(-1)
+ 1200 0498 01F0      		breq .L95
+ 1201               	.L97:
+ 1203               	.LM125:
+ 1204 049a 8091 0000 		lds r24,bmac_tx_pkt_done_signal
+ 1205 049e 0E94 0000 		call nrk_signal_register
+ 1207               	.LM126:
+ 1208 04a2 81E0      		ldi r24,lo8(1)
+ 1209 04a4 8093 0000 		sts tx_data_ready,r24
+ 1211               	.LM127:
+ 1212 04a8 D093 0000 		sts (bmac_rfTxInfo+3)+1,r29
+ 1213 04ac C093 0000 		sts bmac_rfTxInfo+3,r28
+ 1215               	.LM128:
+ 1216 04b0 1093 0000 		sts bmac_rfTxInfo+2,r17
+ 1218               	.LM129:
+ 1219 04b4 61E0      		ldi r22,lo8(1)
+ 1220 04b6 70E0      		ldi r23,hi8(1)
+ 1221 04b8 80E0      		ldi r24,hlo8(1)
+ 1222 04ba 90E0      		ldi r25,hhi8(1)
+ 1223 04bc 0090 0000 		lds r0,bmac_tx_pkt_done_signal
+ 1224 04c0 00C0      		rjmp 2f
+ 1225 04c2 660F      	1:	lsl r22
+ 1226 04c4 771F      		rol r23
+ 1227 04c6 881F      		rol r24
+ 1228 04c8 991F      		rol r25
+ 1229 04ca 0A94      	2:	dec r0
+ 1230 04cc 02F4      		brpl 1b
+ 1231 04ce 0E94 0000 		call nrk_event_wait
+ 1233               	.LM130:
+ 1234 04d2 8091 0000 		lds r24,pkt_got_ack
+ 1235 04d6 8823      		tst r24
+ 1236 04d8 01F0      		breq .L95
+ 1237 04da 81E0      		ldi r24,lo8(1)
+ 1238 04dc 90E0      		ldi r25,hi8(1)
+ 1239 04de 00C0      		rjmp .L100
+ 1240               	.L95:
+ 1241 04e0 8FEF      		ldi r24,lo8(-1)
+ 1242 04e2 9FEF      		ldi r25,hi8(-1)
+ 1243               	.L100:
+ 1244               	/* epilogue: frame size=0 */
+ 1245 04e4 DF91      		pop r29
+ 1246 04e6 CF91      		pop r28
+ 1247 04e8 1F91      		pop r17
+ 1248 04ea 0895      		ret
+ 1249               	/* epilogue end (size=4) */
+ 1250               	/* function bmac_tx_pkt size 63 (56) */
+ 1252               	.Lscope22:
+ 1254               		.stabd	78,0,0
+ 1257               	.global	bmac_set_channel
+ 1259               	bmac_set_channel:
+ 1260               		.stabd	46,0,0
+ 1262               	.LM131:
+ 1263               	.LFBB23:
+ 1264               	/* prologue: frame size=0 */
+ 1265               	/* prologue end (size=0) */
+ 1266 04ec 682F      		mov r22,r24
+ 1268               	.LM132:
+ 1269 04ee 8B31      		cpi r24,lo8(27)
+ 1270 04f0 00F0      		brlo .L103
+ 1272               	.LM133:
+ 1273 04f2 8FEF      		ldi r24,lo8(-1)
+ 1274 04f4 9FEF      		ldi r25,hi8(-1)
+ 1275 04f6 0895      		ret
+ 1276               	.L103:
+ 1278               	.LM134:
+ 1279 04f8 8093 0000 		sts g_chan,r24
+ 1281               	.LM135:
+ 1282 04fc 20E0      		ldi r18,lo8(0)
+ 1283 04fe 30E0      		ldi r19,hi8(0)
+ 1284 0500 4FEF      		ldi r20,lo8(-1)
+ 1285 0502 5FEF      		ldi r21,hi8(-1)
+ 1286 0504 80E0      		ldi r24,lo8(bmac_rfRxInfo)
+ 1287 0506 90E0      		ldi r25,hi8(bmac_rfRxInfo)
+ 1288 0508 0E94 0000 		call rf_init
+ 1289 050c 81E0      		ldi r24,lo8(1)
+ 1290 050e 90E0      		ldi r25,hi8(1)
+ 1292               	.LM136:
+ 1293 0510 0895      		ret
+ 1294               	/* epilogue: frame size=0 */
+ 1295               	/* epilogue: noreturn */
+ 1296               	/* epilogue end (size=0) */
+ 1297               	/* function bmac_set_channel size 19 (19) */
+ 1299               	.Lscope23:
+ 1301               		.stabd	78,0,0
+ 1304               	.global	bmac_init
+ 1306               	bmac_init:
+ 1307               		.stabd	46,0,0
+ 1309               	.LM137:
+ 1310               	.LFBB24:
+ 1311               	/* prologue: frame size=0 */
+ 1312 0512 1F93      		push r17
+ 1313               	/* prologue end (size=1) */
+ 1314 0514 182F      		mov r17,r24
+ 1316               	.LM138:
+ 1317 0516 8FEF      		ldi r24,lo8(-1)
+ 1318 0518 8093 0000 		sts tx_reserve,r24
+ 1320               	.LM139:
+ 1321 051c 81E0      		ldi r24,lo8(1)
+ 1322 051e 8093 0000 		sts cca_active,r24
+ 1324               	.LM140:
+ 1325 0522 1092 0000 		sts _bmac_check_period,__zero_reg__
+ 1326 0526 1092 0000 		sts (_bmac_check_period)+1,__zero_reg__
+ 1327 052a 1092 0000 		sts (_bmac_check_period)+2,__zero_reg__
+ 1328 052e 1092 0000 		sts (_bmac_check_period)+3,__zero_reg__
+ 1330               	.LM141:
+ 1331 0532 80E0      		ldi r24,lo8(100000000)
+ 1332 0534 91EE      		ldi r25,hi8(100000000)
+ 1333 0536 A5EF      		ldi r26,hlo8(100000000)
+ 1334 0538 B5E0      		ldi r27,hhi8(100000000)
+ 1335 053a 8093 0000 		sts _bmac_check_period+4,r24
+ 1336 053e 9093 0000 		sts (_bmac_check_period+4)+1,r25
+ 1337 0542 A093 0000 		sts (_bmac_check_period+4)+2,r26
+ 1338 0546 B093 0000 		sts (_bmac_check_period+4)+3,r27
+ 1340               	.LM142:
+ 1341 054a 0E94 0000 		call nrk_signal_create
+ 1342 054e 8093 0000 		sts bmac_rx_pkt_signal,r24
+ 1344               	.LM143:
+ 1345 0552 8F3F      		cpi r24,lo8(-1)
+ 1346 0554 01F4      		brne .L108
+ 1348               	.LM144:
+ 1349 0556 80E0      		ldi r24,lo8(__c.2643)
+ 1350 0558 90E0      		ldi r25,hi8(__c.2643)
+ 1351 055a 00C0      		rjmp .L152
+ 1352               	.L108:
+ 1354               	.LM145:
+ 1355 055c 0E94 0000 		call nrk_signal_create
+ 1356 0560 8093 0000 		sts bmac_tx_pkt_done_signal,r24
+ 1358               	.LM146:
+ 1359 0564 8F3F      		cpi r24,lo8(-1)
+ 1360 0566 01F4      		brne .L111
+ 1362               	.LM147:
+ 1363 0568 80E0      		ldi r24,lo8(__c.2645)
+ 1364 056a 90E0      		ldi r25,hi8(__c.2645)
+ 1365               	.L152:
+ 1366 056c 0E94 0000 		call nrk_kprintf
+ 1368               	.LM148:
+ 1369 0570 E091 0000 		lds r30,nrk_cur_task_TCB
+ 1370 0574 F091 0000 		lds r31,(nrk_cur_task_TCB)+1
+ 1371 0578 6085      		ldd r22,Z+8
+ 1372 057a 8EE0      		ldi r24,lo8(14)
+ 1373 057c 0E94 0000 		call nrk_kernel_error_add
+ 1374 0580 8FEF      		ldi r24,lo8(-1)
+ 1375 0582 9FEF      		ldi r25,hi8(-1)
+ 1376 0584 00C0      		rjmp .L110
+ 1377               	.L111:
+ 1379               	.LM149:
+ 1380 0586 0E94 0000 		call nrk_signal_create
+ 1381 058a 8093 0000 		sts bmac_enable_signal,r24
+ 1383               	.LM150:
+ 1384 058e 8F3F      		cpi r24,lo8(-1)
+ 1385 0590 01F4      		brne .L113
+ 1387               	.LM151:
+ 1388 0592 80E0      		ldi r24,lo8(__c.2647)
+ 1389 0594 90E0      		ldi r25,hi8(__c.2647)
+ 1390 0596 00C0      		rjmp .L152
+ 1391               	.L113:
+ 1393               	.LM152:
+ 1394 0598 1092 0000 		sts tx_data_ready,__zero_reg__
+ 1396               	.LM153:
+ 1397 059c 1092 0000 		sts rx_buf_empty,__zero_reg__
+ 1399               	.LM154:
+ 1400 05a0 1092 0000 		sts (bmac_rfRxInfo+5)+1,__zero_reg__
+ 1401 05a4 1092 0000 		sts bmac_rfRxInfo+5,__zero_reg__
+ 1403               	.LM155:
+ 1404 05a8 1092 0000 		sts bmac_rfRxInfo+4,__zero_reg__
+ 1406               	.LM156:
+ 1407 05ac 20E0      		ldi r18,lo8(0)
+ 1408 05ae 30E0      		ldi r19,hi8(0)
+ 1409 05b0 4FEF      		ldi r20,lo8(-1)
+ 1410 05b2 5FEF      		ldi r21,hi8(-1)
+ 1411 05b4 612F      		mov r22,r17
+ 1412 05b6 80E0      		ldi r24,lo8(bmac_rfRxInfo)
+ 1413 05b8 90E0      		ldi r25,hi8(bmac_rfRxInfo)
+ 1414 05ba 0E94 0000 		call rf_init
+ 1416               	.LM157:
+ 1417 05be 1093 0000 		sts g_chan,r17
+ 1419               	.LM158:
+ 1420 05c2 4098      		cbi 40-0x20,0
+ 1421 05c4 83E1      		ldi r24,lo8(19)
+ 1422 05c6 8EBD      		out 78-0x20,r24
+ 1423               	.L115:
+ 1424 05c8 0DB4      		in __tmp_reg__,77-0x20
+ 1425 05ca 07FE      		sbrs __tmp_reg__,7
+ 1426 05cc 00C0      		rjmp .L115
+ 1427 05ce 85EE      		ldi r24,lo8(-27)
+ 1428 05d0 8EBD      		out 78-0x20,r24
+ 1429               	.L117:
+ 1430 05d2 0DB4      		in __tmp_reg__,77-0x20
+ 1431 05d4 07FE      		sbrs __tmp_reg__,7
+ 1432 05d6 00C0      		rjmp .L117
+ 1433 05d8 80E8      		ldi r24,lo8(-128)
+ 1434 05da 8EBD      		out 78-0x20,r24
+ 1435               	.L119:
+ 1436 05dc 0DB4      		in __tmp_reg__,77-0x20
+ 1437 05de 07FE      		sbrs __tmp_reg__,7
+ 1438 05e0 00C0      		rjmp .L119
+ 1439 05e2 409A      		sbi 40-0x20,0
+ 1441               	.LM159:
+ 1442 05e4 4098      		cbi 40-0x20,0
+ 1443 05e6 85E1      		ldi r24,lo8(21)
+ 1444 05e8 8EBD      		out 78-0x20,r24
+ 1445               	.L121:
+ 1446 05ea 0DB4      		in __tmp_reg__,77-0x20
+ 1447 05ec 07FE      		sbrs __tmp_reg__,7
+ 1448 05ee 00C0      		rjmp .L121
+ 1449 05f0 80E8      		ldi r24,lo8(-128)
+ 1450 05f2 8EBD      		out 78-0x20,r24
+ 1451               	.L123:
+ 1452 05f4 0DB4      		in __tmp_reg__,77-0x20
+ 1453 05f6 07FE      		sbrs __tmp_reg__,7
+ 1454 05f8 00C0      		rjmp .L123
+ 1455 05fa 8FEF      		ldi r24,lo8(-1)
+ 1456 05fc 8EBD      		out 78-0x20,r24
+ 1457               	.L125:
+ 1458 05fe 0DB4      		in __tmp_reg__,77-0x20
+ 1459 0600 07FE      		sbrs __tmp_reg__,7
+ 1460 0602 00C0      		rjmp .L125
+ 1461 0604 409A      		sbi 40-0x20,0
+ 1463               	.LM160:
+ 1464 0606 4098      		cbi 40-0x20,0
+ 1465 0608 87E1      		ldi r24,lo8(23)
+ 1466 060a 8EBD      		out 78-0x20,r24
+ 1467               	.L127:
+ 1468 060c 0DB4      		in __tmp_reg__,77-0x20
+ 1469 060e 07FE      		sbrs __tmp_reg__,7
+ 1470 0610 00C0      		rjmp .L127
+ 1471 0612 8AE0      		ldi r24,lo8(10)
+ 1472 0614 8EBD      		out 78-0x20,r24
+ 1473               	.L129:
+ 1474 0616 0DB4      		in __tmp_reg__,77-0x20
+ 1475 0618 07FE      		sbrs __tmp_reg__,7
+ 1476 061a 00C0      		rjmp .L129
+ 1477 061c 86E5      		ldi r24,lo8(86)
+ 1478 061e 8EBD      		out 78-0x20,r24
+ 1479               	.L131:
+ 1480 0620 0DB4      		in __tmp_reg__,77-0x20
+ 1481 0622 07FE      		sbrs __tmp_reg__,7
+ 1482 0624 00C0      		rjmp .L131
+ 1483 0626 409A      		sbi 40-0x20,0
+ 1485               	.LM161:
+ 1486 0628 83ED      		ldi r24,lo8(-45)
+ 1487 062a 0E94 0000 		call rf_set_cca_thresh
+ 1489               	.LM162:
+ 1490 062e 81E0      		ldi r24,lo8(1)
+ 1491 0630 8093 0000 		sts bmac_running,r24
+ 1493               	.LM163:
+ 1494 0634 8093 0000 		sts is_enabled,r24
+ 1495 0638 81E0      		ldi r24,lo8(1)
+ 1496 063a 90E0      		ldi r25,hi8(1)
+ 1497               	.L110:
+ 1498               	/* epilogue: frame size=0 */
+ 1499 063c 1F91      		pop r17
+ 1500 063e 0895      		ret
+ 1501               	/* epilogue end (size=2) */
+ 1502               	/* function bmac_init size 151 (148) */
+ 1504               	.Lscope24:
+ 1506               		.stabd	78,0,0
+ 1509               	.global	bmac_set_cca_thresh
+ 1511               	bmac_set_cca_thresh:
+ 1512               		.stabd	46,0,0
+ 1514               	.LM164:
+ 1515               	.LFBB25:
+ 1516               	/* prologue: frame size=0 */
+ 1517               	/* prologue end (size=0) */
+ 1519               	.LM165:
+ 1520 0640 0E94 0000 		call rf_set_cca_thresh
+ 1522               	.LM166:
+ 1523 0644 81E0      		ldi r24,lo8(1)
+ 1524 0646 90E0      		ldi r25,hi8(1)
+ 1525               	/* epilogue: frame size=0 */
+ 1526 0648 0895      		ret
+ 1527               	/* epilogue end (size=1) */
+ 1528               	/* function bmac_set_cca_thresh size 5 (4) */
+ 1530               	.Lscope25:
+ 1532               		.stabd	78,0,0
+ 1535               	.global	bmac_set_rf_power
+ 1537               	bmac_set_rf_power:
+ 1538               		.stabd	46,0,0
+ 1540               	.LM167:
+ 1541               	.LFBB26:
+ 1542               	/* prologue: frame size=0 */
+ 1543               	/* prologue end (size=0) */
+ 1545               	.LM168:
+ 1546 064a 8032      		cpi r24,lo8(32)
+ 1547 064c 00F0      		brlo .L156
+ 1549               	.LM169:
+ 1550 064e 8FEF      		ldi r24,lo8(-1)
+ 1551 0650 9FEF      		ldi r25,hi8(-1)
+ 1552 0652 0895      		ret
+ 1553               	.L156:
+ 1555               	.LM170:
+ 1556 0654 0E94 0000 		call rf_tx_power
+ 1557 0658 81E0      		ldi r24,lo8(1)
+ 1558 065a 90E0      		ldi r25,hi8(1)
+ 1560               	.LM171:
+ 1561 065c 0895      		ret
+ 1562               	/* epilogue: frame size=0 */
+ 1563               	/* epilogue: noreturn */
+ 1564               	/* epilogue end (size=0) */
+ 1565               	/* function bmac_set_rf_power size 10 (10) */
+ 1567               	.Lscope26:
+ 1569               		.stabd	78,0,0
+ 1571               	.global	bmac_encryption_disable
+ 1573               	bmac_encryption_disable:
+ 1574               		.stabd	46,0,0
+ 1576               	.LM172:
+ 1577               	.LFBB27:
+ 1578               	/* prologue: frame size=0 */
+ 1579               	/* prologue end (size=0) */
+ 1581               	.LM173:
+ 1582 065e 0E94 0000 		call rf_security_disable
+ 1584               	.LM174:
+ 1585 0662 81E0      		ldi r24,lo8(1)
+ 1586 0664 90E0      		ldi r25,hi8(1)
+ 1587               	/* epilogue: frame size=0 */
+ 1588 0666 0895      		ret
+ 1589               	/* epilogue end (size=1) */
+ 1590               	/* function bmac_encryption_disable size 5 (4) */
+ 1592               	.Lscope27:
+ 1594               		.stabd	78,0,0
+ 1596               	.global	bmac_encryption_enable
+ 1598               	bmac_encryption_enable:
+ 1599               		.stabd	46,0,0
+ 1601               	.LM175:
+ 1602               	.LFBB28:
+ 1603               	/* prologue: frame size=0 */
+ 1604               	/* prologue end (size=0) */
+ 1606               	.LM176:
+ 1607 0668 0E94 0000 		call rf_security_enable
+ 1609               	.LM177:
+ 1610 066c 81E0      		ldi r24,lo8(1)
+ 1611 066e 90E0      		ldi r25,hi8(1)
+ 1612               	/* epilogue: frame size=0 */
+ 1613 0670 0895      		ret
+ 1614               	/* epilogue end (size=1) */
+ 1615               	/* function bmac_encryption_enable size 5 (4) */
+ 1617               	.Lscope28:
+ 1619               		.stabd	78,0,0
+ 1623               	.global	bmac_encryption_set_key
+ 1625               	bmac_encryption_set_key:
+ 1626               		.stabd	46,0,0
+ 1628               	.LM178:
+ 1629               	.LFBB29:
+ 1630               	/* prologue: frame size=0 */
+ 1631               	/* prologue end (size=0) */
+ 1633               	.LM179:
+ 1634 0672 6031      		cpi r22,lo8(16)
+ 1635 0674 01F0      		breq .L165
+ 1637               	.LM180:
+ 1638 0676 8FEF      		ldi r24,lo8(-1)
+ 1639 0678 9FEF      		ldi r25,hi8(-1)
+ 1640 067a 0895      		ret
+ 1641               	.L165:
+ 1643               	.LM181:
+ 1644 067c 0E94 0000 		call rf_security_set_key
+ 1645 0680 81E0      		ldi r24,lo8(1)
+ 1646 0682 90E0      		ldi r25,hi8(1)
+ 1648               	.LM182:
+ 1649 0684 0895      		ret
+ 1650               	/* epilogue: frame size=0 */
+ 1651               	/* epilogue: noreturn */
+ 1652               	/* epilogue end (size=0) */
+ 1653               	/* function bmac_encryption_set_key size 10 (10) */
+ 1655               	.Lscope29:
+ 1657               		.stabd	78,0,0
+ 1659               	.global	bmac_rx_pkt_is_encrypted
+ 1661               	bmac_rx_pkt_is_encrypted:
+ 1662               		.stabd	46,0,0
+ 1664               	.LM183:
+ 1665               	.LFBB30:
+ 1666               	/* prologue: frame size=0 */
+ 1667               	/* prologue end (size=0) */
+ 1669               	.LM184:
+ 1670 0686 0E94 0000 		call rf_security_last_pkt_status
+ 1672               	.LM185:
+ 1673 068a 9927      		clr r25
+ 1674 068c 87FD      		sbrc r24,7
+ 1675 068e 9095      		com r25
+ 1676               	/* epilogue: frame size=0 */
+ 1677 0690 0895      		ret
+ 1678               	/* epilogue end (size=1) */
+ 1679               	/* function bmac_rx_pkt_is_encrypted size 6 (5) */
+ 1681               	.Lscope30:
+ 1683               		.stabd	78,0,0
+ 1686               	.global	bmac_addr_decode_set_my_mac
+ 1688               	bmac_addr_decode_set_my_mac:
+ 1689               		.stabd	46,0,0
+ 1691               	.LM186:
+ 1692               	.LFBB31:
+ 1693               	/* prologue: frame size=0 */
+ 1694               	/* prologue end (size=0) */
+ 1696               	.LM187:
+ 1697 0692 0E94 0000 		call rf_addr_decode_set_my_mac
+ 1699               	.LM188:
+ 1700 0696 81E0      		ldi r24,lo8(1)
+ 1701 0698 90E0      		ldi r25,hi8(1)
+ 1702               	/* epilogue: frame size=0 */
+ 1703 069a 0895      		ret
+ 1704               	/* epilogue end (size=1) */
+ 1705               	/* function bmac_addr_decode_set_my_mac size 5 (4) */
+ 1707               	.Lscope31:
+ 1709               		.stabd	78,0,0
+ 1711               	.global	bmac_addr_decode_enable
+ 1713               	bmac_addr_decode_enable:
+ 1714               		.stabd	46,0,0
+ 1716               	.LM189:
+ 1717               	.LFBB32:
+ 1718               	/* prologue: frame size=0 */
+ 1719               	/* prologue end (size=0) */
+ 1721               	.LM190:
+ 1722 069c 0E94 0000 		call rf_addr_decode_enable
+ 1724               	.LM191:
+ 1725 06a0 81E0      		ldi r24,lo8(1)
+ 1726 06a2 90E0      		ldi r25,hi8(1)
+ 1727               	/* epilogue: frame size=0 */
+ 1728 06a4 0895      		ret
+ 1729               	/* epilogue end (size=1) */
+ 1730               	/* function bmac_addr_decode_enable size 5 (4) */
+ 1732               	.Lscope32:
+ 1734               		.stabd	78,0,0
+ 1736               	.global	bmac_addr_decode_disable
+ 1738               	bmac_addr_decode_disable:
+ 1739               		.stabd	46,0,0
+ 1741               	.LM192:
+ 1742               	.LFBB33:
+ 1743               	/* prologue: frame size=0 */
+ 1744               	/* prologue end (size=0) */
+ 1746               	.LM193:
+ 1747 06a6 0E94 0000 		call rf_addr_decode_disable
+ 1749               	.LM194:
+ 1750 06aa 81E0      		ldi r24,lo8(1)
+ 1751 06ac 90E0      		ldi r25,hi8(1)
+ 1752               	/* epilogue: frame size=0 */
+ 1753 06ae 0895      		ret
+ 1754               	/* epilogue end (size=1) */
+ 1755               	/* function bmac_addr_decode_disable size 5 (4) */
+ 1757               	.Lscope33:
+ 1759               		.stabd	78,0,0
+ 1761               	.global	bmac_auto_ack_enable
+ 1763               	bmac_auto_ack_enable:
+ 1764               		.stabd	46,0,0
+ 1766               	.LM195:
+ 1767               	.LFBB34:
+ 1768               	/* prologue: frame size=0 */
+ 1769               	/* prologue end (size=0) */
+ 1771               	.LM196:
+ 1772 06b0 0E94 0000 		call rf_auto_ack_enable
+ 1774               	.LM197:
+ 1775 06b4 81E0      		ldi r24,lo8(1)
+ 1776 06b6 90E0      		ldi r25,hi8(1)
+ 1777               	/* epilogue: frame size=0 */
+ 1778 06b8 0895      		ret
+ 1779               	/* epilogue end (size=1) */
+ 1780               	/* function bmac_auto_ack_enable size 5 (4) */
+ 1782               	.Lscope34:
+ 1784               		.stabd	78,0,0
+ 1786               	.global	bmac_auto_ack_disable
+ 1788               	bmac_auto_ack_disable:
+ 1789               		.stabd	46,0,0
+ 1791               	.LM198:
+ 1792               	.LFBB35:
+ 1793               	/* prologue: frame size=0 */
+ 1794               	/* prologue end (size=0) */
+ 1796               	.LM199:
+ 1797 06ba 0E94 0000 		call rf_auto_ack_disable
+ 1799               	.LM200:
+ 1800 06be 81E0      		ldi r24,lo8(1)
+ 1801 06c0 90E0      		ldi r25,hi8(1)
+ 1802               	/* epilogue: frame size=0 */
+ 1803 06c2 0895      		ret
+ 1804               	/* epilogue end (size=1) */
+ 1805               	/* function bmac_auto_ack_disable size 5 (4) */
+ 1807               	.Lscope35:
+ 1809               		.stabd	78,0,0
+ 1811               	.global	bmac_tx_reserve_get
+ 1813               	bmac_tx_reserve_get:
+ 1814               		.stabd	46,0,0
+ 1816               	.LM201:
+ 1817               	.LFBB36:
+ 1818               	/* prologue: frame size=0 */
+ 1819               	/* prologue end (size=0) */
+ 1821               	.LM202:
+ 1822 06c4 8091 0000 		lds r24,tx_reserve
+ 1823 06c8 87FF      		sbrs r24,7
+ 1824 06ca 00C0      		rjmp .L182
+ 1826               	.LM203:
+ 1827 06cc 80E0      		ldi r24,lo8(0)
+ 1828 06ce 90E0      		ldi r25,hi8(0)
+ 1829 06d0 0895      		ret
+ 1830               	.L182:
+ 1832               	.LM204:
+ 1833 06d2 9927      		clr r25
+ 1834 06d4 87FD      		sbrc r24,7
+ 1835 06d6 9095      		com r25
+ 1836 06d8 0E94 0000 		call nrk_reserve_get
+ 1838               	.LM205:
+ 1839 06dc 0895      		ret
+ 1840               	/* epilogue: frame size=0 */
+ 1841               	/* epilogue: noreturn */
+ 1842               	/* epilogue end (size=0) */
+ 1843               	/* function bmac_tx_reserve_get size 13 (13) */
+ 1845               	.Lscope36:
+ 1847               		.stabd	78,0,0
+ 1851               	.global	bmac_tx_reserve_set
+ 1853               	bmac_tx_reserve_set:
+ 1854               		.stabd	46,0,0
+ 1856               	.LM206:
+ 1857               	.LFBB37:
+ 1858               	/* prologue: frame size=0 */
+ 1859 06de 0F93      		push r16
+ 1860 06e0 1F93      		push r17
+ 1861 06e2 CF93      		push r28
+ 1862 06e4 DF93      		push r29
+ 1863               	/* prologue end (size=4) */
+ 1864 06e6 8C01      		movw r16,r24
+ 1865 06e8 EB01      		movw r28,r22
+ 1867               	.LM207:
+ 1868 06ea 8091 0000 		lds r24,tx_reserve
+ 1869 06ee 8F3F      		cpi r24,lo8(-1)
+ 1870 06f0 01F4      		brne .L187
+ 1872               	.LM208:
+ 1873 06f2 0E94 0000 		call nrk_reserve_create
+ 1874 06f6 8093 0000 		sts tx_reserve,r24
+ 1875               	.L187:
+ 1877               	.LM209:
+ 1878 06fa 8091 0000 		lds r24,tx_reserve
+ 1879 06fe 87FF      		sbrs r24,7
+ 1880 0700 00C0      		rjmp .L189
+ 1881 0702 2FEF      		ldi r18,lo8(-1)
+ 1882 0704 3FEF      		ldi r19,hi8(-1)
+ 1883 0706 00C0      		rjmp .L191
+ 1884               	.L189:
+ 1886               	.LM210:
+ 1887 0708 20E0      		ldi r18,lo8(0)
+ 1888 070a 30E0      		ldi r19,hi8(0)
+ 1889 070c AE01      		movw r20,r28
+ 1890 070e B801      		movw r22,r16
+ 1891 0710 9927      		clr r25
+ 1892 0712 87FD      		sbrc r24,7
+ 1893 0714 9095      		com r25
+ 1894 0716 0E94 0000 		call nrk_reserve_set
+ 1895 071a 282F      		mov r18,r24
+ 1896 071c 3327      		clr r19
+ 1897 071e 27FD      		sbrc r18,7
+ 1898 0720 3095      		com r19
+ 1899               	.L191:
+ 1901               	.LM211:
+ 1902 0722 C901      		movw r24,r18
+ 1903               	/* epilogue: frame size=0 */
+ 1904 0724 DF91      		pop r29
+ 1905 0726 CF91      		pop r28
+ 1906 0728 1F91      		pop r17
+ 1907 072a 0F91      		pop r16
+ 1908 072c 0895      		ret
+ 1909               	/* epilogue end (size=5) */
+ 1910               	/* function bmac_tx_reserve_set size 40 (31) */
+ 1912               	.Lscope37:
+ 1914               		.stabd	78,0,0
+ 1918               	.global	bmac_encryption_set_ctr_counter
+ 1920               	bmac_encryption_set_ctr_counter:
+ 1921               		.stabd	46,0,0
+ 1923               	.LM212:
+ 1924               	.LFBB38:
+ 1925               	/* prologue: frame size=0 */
+ 1926               	/* prologue end (size=0) */
+ 1928               	.LM213:
+ 1929 072e 6430      		cpi r22,lo8(4)
+ 1930 0730 01F0      		breq .L194
+ 1932               	.LM214:
+ 1933 0732 8FEF      		ldi r24,lo8(-1)
+ 1934 0734 9FEF      		ldi r25,hi8(-1)
+ 1935 0736 0895      		ret
+ 1936               	.L194:
+ 1938               	.LM215:
+ 1939 0738 0E94 0000 		call rf_security_set_ctr_counter
+ 1940 073c 81E0      		ldi r24,lo8(1)
+ 1941 073e 90E0      		ldi r25,hi8(1)
+ 1943               	.LM216:
+ 1944 0740 0895      		ret
+ 1945               	/* epilogue: frame size=0 */
+ 1946               	/* epilogue: noreturn */
+ 1947               	/* epilogue end (size=0) */
+ 1948               	/* function bmac_encryption_set_ctr_counter size 10 (10) */
+ 1950               	.Lscope38:
+ 1952               		.stabd	78,0,0
+ 1954               	.global	bmac_nw_task
+ 1956               	bmac_nw_task:
+ 1957               		.stabd	46,0,0
+ 1959               	.LM217:
+ 1960               	.LFBB39:
+ 1961               	/* prologue: frame size=0 */
+ 1962               	/* prologue end (size=0) */
+ 1963 0742 00C0      		rjmp .L199
+ 1964               	.L200:
+ 1966               	.LM218:
+ 1967 0744 0E94 0000 		call nrk_wait_until_next_period
+ 1968               	.L199:
+ 1969 0748 8091 0000 		lds r24,bmac_running
+ 1970 074c 8823      		tst r24
+ 1971 074e 01F0      		breq .L200
+ 1973               	.LM219:
+ 1974 0750 8091 0000 		lds r24,bmac_enable_signal
+ 1975 0754 0E94 0000 		call nrk_signal_register
+ 1976               	.L217:
+ 1978               	.LM220:
+ 1979 0758 8091 0000 		lds r24,is_enabled
+ 1980 075c 8823      		tst r24
+ 1981 075e 01F0      		breq .L213
+ 1983               	.LM221:
+ 1984 0760 8091 0000 		lds r24,rx_buf_empty
+ 1985 0764 8130      		cpi r24,lo8(1)
+ 1986 0766 01F4      		brne .L205
+ 1987 0768 0E94 0000 		call _bmac_channel_check
+ 1989               	.LM222:
+ 1990 076c 8823      		tst r24
+ 1991 076e 01F4      		brne .L205
+ 1993               	.LM223:
+ 1994 0770 0E94 0000 		call _bmac_rx
+ 1995 0774 8130      		cpi r24,lo8(1)
+ 1996 0776 01F4      		brne .L205
+ 1998               	.LM224:
+ 1999 0778 8091 0000 		lds r24,bmac_rx_pkt_signal
+ 2000 077c 0E94 0000 		call nrk_event_signal
+ 2001               	.L205:
+ 2003               	.LM225:
+ 2004 0780 8091 0000 		lds r24,tx_data_ready
+ 2005 0784 8130      		cpi r24,lo8(1)
+ 2006 0786 01F4      		brne .L209
+ 2008               	.LM226:
+ 2009 0788 0E94 0000 		call _bmac_tx
+ 2010               	.L209:
+ 2012               	.LM227:
+ 2013 078c 2091 0000 		lds r18,_bmac_check_period
+ 2014 0790 3091 0000 		lds r19,_bmac_check_period+1
+ 2015 0794 4091 0000 		lds r20,_bmac_check_period+2
+ 2016 0798 5091 0000 		lds r21,_bmac_check_period+3
+ 2017 079c 6091 0000 		lds r22,_bmac_check_period+4
+ 2018 07a0 7091 0000 		lds r23,_bmac_check_period+5
+ 2019 07a4 8091 0000 		lds r24,_bmac_check_period+6
+ 2020 07a8 9091 0000 		lds r25,_bmac_check_period+7
+ 2021 07ac 0E94 0000 		call nrk_wait
+ 2022 07b0 00C0      		rjmp .L217
+ 2023               	.L213:
+ 2025               	.LM228:
+ 2026 07b2 61E0      		ldi r22,lo8(1)
+ 2027 07b4 70E0      		ldi r23,hi8(1)
+ 2028 07b6 80E0      		ldi r24,hlo8(1)
+ 2029 07b8 90E0      		ldi r25,hhi8(1)
+ 2030 07ba 0090 0000 		lds r0,bmac_enable_signal
+ 2031 07be 00C0      		rjmp 2f
+ 2032 07c0 660F      	1:	lsl r22
+ 2033 07c2 771F      		rol r23
+ 2034 07c4 881F      		rol r24
+ 2035 07c6 991F      		rol r25
+ 2036 07c8 0A94      	2:	dec r0
+ 2037 07ca 02F4      		brpl 1b
+ 2038 07cc 0E94 0000 		call nrk_event_wait
+ 2040               	.LM229:
+ 2041 07d0 0090 0000 		lds r0,bmac_enable_signal
+ 2042 07d4 00C0      		rjmp 2f
+ 2043 07d6 9695      	1:	lsr r25
+ 2044 07d8 8795      		ror r24
+ 2045 07da 7795      		ror r23
+ 2046 07dc 6795      		ror r22
+ 2047 07de 0A94      	2:	dec r0
+ 2048 07e0 02F4      		brpl 1b
+ 2049 07e2 60FD      		sbrc r22,0
+ 2050 07e4 00C0      		rjmp .L217
+ 2051 07e6 00C0      		rjmp .L213
+ 2052               	/* epilogue: frame size=0 */
+ 2053               	/* epilogue: noreturn */
+ 2054               	/* epilogue end (size=0) */
+ 2055               	/* function bmac_nw_task size 83 (83) */
+ 2057               	.Lscope39:
+ 2059               		.stabd	78,0,0
+ 2063               	.global	bmac_rx_pkt_get
+ 2065               	bmac_rx_pkt_get:
+ 2066               		.stabd	46,0,0
+ 2068               	.LM230:
+ 2069               	.LFBB40:
+ 2070               	/* prologue: frame size=0 */
+ 2071               	/* prologue end (size=0) */
+ 2072 07e8 FC01      		movw r30,r24
+ 2073 07ea DB01      		movw r26,r22
+ 2075               	.LM231:
+ 2076 07ec 8091 0000 		lds r24,rx_buf_empty
+ 2077 07f0 8823      		tst r24
+ 2078 07f2 01F0      		breq .L219
+ 2080               	.LM232:
+ 2081 07f4 1082      		st Z,__zero_reg__
+ 2083               	.LM233:
+ 2084 07f6 1C92      		st X,__zero_reg__
+ 2085 07f8 80E0      		ldi r24,lo8(0)
+ 2086 07fa 90E0      		ldi r25,hi8(0)
+ 2087 07fc 0895      		ret
+ 2088               	.L219:
+ 2090               	.LM234:
+ 2091 07fe 8091 0000 		lds r24,bmac_rfRxInfo+3
+ 2092 0802 8083      		st Z,r24
+ 2094               	.LM235:
+ 2095 0804 8091 0000 		lds r24,bmac_rfRxInfo+8
+ 2096 0808 8C93      		st X,r24
+ 2098               	.LM236:
+ 2099 080a 8091 0000 		lds r24,bmac_rfRxInfo+5
+ 2100 080e 9091 0000 		lds r25,(bmac_rfRxInfo+5)+1
+ 2102               	.LM237:
+ 2103 0812 0895      		ret
+ 2104               	/* epilogue: frame size=0 */
+ 2105               	/* epilogue: noreturn */
+ 2106               	/* epilogue end (size=0) */
+ 2107               	/* function bmac_rx_pkt_get size 22 (22) */
+ 2109               	.Lscope40:
+ 2111               		.stabd	78,0,0
+ 2112               		.section	.progmem.data,"a",@progbits
+ 2115               	__c.2647:
+ 2116 0000 424D 4143 		.string	"BMAC ERROR: creating enable signal failed\r\n"
+ 2116      2045 5252 
+ 2116      4F52 3A20 
+ 2116      6372 6561 
+ 2116      7469 6E67 
+ 2119               	__c.2645:
+ 2120 002c 424D 4143 		.string	"BMAC ERROR: creating tx signal failed\r\n"
+ 2120      2045 5252 
+ 2120      4F52 3A20 
+ 2120      6372 6561 
+ 2120      7469 6E67 
+ 2123               	__c.2643:
+ 2124 0054 424D 4143 		.string	"BMAC ERROR: creating rx signal failed\r\n"
+ 2124      2045 5252 
+ 2124      4F52 3A20 
+ 2124      6372 6561 
+ 2124      7469 6E67 
+ 2125               		.comm _nrk_signal_list,4,1
+ 2126               		.comm nrk_idle_task_stk,128,1
+ 2127               		.comm nrk_kernel_stk_ptr,2,1
+ 2128               		.comm _nrk_prev_timer_val,1,1
+ 2129               		.comm _nrk_time_trigger,1,1
+ 2130               		.comm app_timer0_callback,2,1
+ 2131               		.comm app_timer0_prescale,1,1
+ 2132               		.comm error_task,1,1
+ 2133               		.comm error_num,1,1
+ 2134               		.comm tx_reserve,1,1
+ 2135               		.comm bmac_task,35,1
+ 2136               		.comm bmac_task_stack,128,1
+ 2137               		.comm cca_active,1,1
+ 2138               		.comm bmac_rx_pkt_signal,1,1
+ 2139               		.comm bmac_tx_pkt_done_signal,1,1
+ 2140               		.comm bmac_enable_signal,1,1
+ 2141               		.comm bmac_rfRxInfo,9,1
+ 2142               		.comm bmac_rfTxInfo,7,1
+ 2143               		.comm tx_data_ready,1,1
+ 2144               		.comm rx_buf_empty,1,1
+ 2145               		.comm bmac_running,1,1
+ 2146               		.comm pkt_got_ack,1,1
+ 2147               		.comm g_chan,1,1
+ 2148               		.comm is_enabled,1,1
+ 2149               		.comm _bmac_check_period,8,1
+ 2178               		.text
+ 2180               	.Letext0:
+ 2181               	/* File "../../src/net/bmac/bmac.c": code 1035 = 0x040b ( 952), prologues  28, epilogues  55 */
+DEFINED SYMBOLS
+                            *ABS*:00000000 bmac.c
+     /tmp/cc2UnLHx.s:2      *ABS*:0000003f __SREG__
+     /tmp/cc2UnLHx.s:3      *ABS*:0000003e __SP_H__
+     /tmp/cc2UnLHx.s:4      *ABS*:0000003d __SP_L__
+     /tmp/cc2UnLHx.s:5      *ABS*:00000000 __tmp_reg__
+     /tmp/cc2UnLHx.s:6      *ABS*:00000001 __zero_reg__
+     /tmp/cc2UnLHx.s:143    .text:00000000 bmac_tx_busy
+                            *COM*:00000001 tx_data_ready
+     /tmp/cc2UnLHx.s:163    .text:00000008 bmac_got_ack
+                            *COM*:00000001 pkt_got_ack
+     /tmp/cc2UnLHx.s:184    .text:00000010 rf_rx_callback
+     /tmp/cc2UnLHx.s:203    .text:00000012 bmac_addr_decode_dest_mac
+                            *COM*:00000007 bmac_rfTxInfo
+     /tmp/cc2UnLHx.s:230    .text:00000020 bmac_set_cca_active
+                            *COM*:00000001 cca_active
+     /tmp/cc2UnLHx.s:253    .text:00000026 bmac_rx_pkt_set_buffer
+                            *COM*:00000009 bmac_rfRxInfo
+                            *COM*:00000001 rx_buf_empty
+     /tmp/cc2UnLHx.s:299    .text:00000048 bmac_tx_pkt_nonblocking
+     /tmp/cc2UnLHx.s:345    .text:00000070 bmac_rx_pkt_ready
+     /tmp/cc2UnLHx.s:376    .text:00000084 bmac_rx_pkt_release
+     /tmp/cc2UnLHx.s:402    .text:00000090 bmac_disable
+                            *COM*:00000001 is_enabled
+     /tmp/cc2UnLHx.s:424    .text:00000096 bmac_set_rx_check_rate
+                            *COM*:00000008 _bmac_check_period
+     /tmp/cc2UnLHx.s:511    .text:0000011e bmac_started
+                            *COM*:00000001 bmac_running
+     /tmp/cc2UnLHx.s:536    .text:0000012a _b_pow
+     /tmp/cc2UnLHx.s:593    .text:00000150 bmac_task_config
+                            *COM*:00000023 bmac_task
+     /tmp/cc2UnLHx.s:1956   .text:00000742 bmac_nw_task
+                            *COM*:00000080 bmac_task_stack
+     /tmp/cc2UnLHx.s:693    .text:00000200 bmac_enable
+                            *COM*:00000001 bmac_enable_signal
+     /tmp/cc2UnLHx.s:719    .text:00000210 _bmac_channel_check
+     /tmp/cc2UnLHx.s:766    .text:0000023e _bmac_tx
+                            *COM*:00000001 bmac_tx_pkt_done_signal
+     /tmp/cc2UnLHx.s:942    .text:00000378 _bmac_rx
+                            *COM*:00000001 g_chan
+     /tmp/cc2UnLHx.s:1052   .text:00000400 bmac_get_tx_done_signal
+     /tmp/cc2UnLHx.s:1080   .text:00000414 bmac_get_rx_pkt_signal
+                            *COM*:00000001 bmac_rx_pkt_signal
+     /tmp/cc2UnLHx.s:1108   .text:00000428 bmac_wait_until_rx_pkt
+     /tmp/cc2UnLHx.s:1170   .text:00000470 bmac_tx_pkt
+                            *COM*:00000001 tx_reserve
+     /tmp/cc2UnLHx.s:1259   .text:000004ec bmac_set_channel
+     /tmp/cc2UnLHx.s:1306   .text:00000512 bmac_init
+     /tmp/cc2UnLHx.s:2123   .progmem.data:00000054 __c.2643
+     /tmp/cc2UnLHx.s:2119   .progmem.data:0000002c __c.2645
+     /tmp/cc2UnLHx.s:2115   .progmem.data:00000000 __c.2647
+     /tmp/cc2UnLHx.s:1511   .text:00000640 bmac_set_cca_thresh
+     /tmp/cc2UnLHx.s:1537   .text:0000064a bmac_set_rf_power
+     /tmp/cc2UnLHx.s:1573   .text:0000065e bmac_encryption_disable
+     /tmp/cc2UnLHx.s:1598   .text:00000668 bmac_encryption_enable
+     /tmp/cc2UnLHx.s:1625   .text:00000672 bmac_encryption_set_key
+     /tmp/cc2UnLHx.s:1661   .text:00000686 bmac_rx_pkt_is_encrypted
+     /tmp/cc2UnLHx.s:1688   .text:00000692 bmac_addr_decode_set_my_mac
+     /tmp/cc2UnLHx.s:1713   .text:0000069c bmac_addr_decode_enable
+     /tmp/cc2UnLHx.s:1738   .text:000006a6 bmac_addr_decode_disable
+     /tmp/cc2UnLHx.s:1763   .text:000006b0 bmac_auto_ack_enable
+     /tmp/cc2UnLHx.s:1788   .text:000006ba bmac_auto_ack_disable
+     /tmp/cc2UnLHx.s:1813   .text:000006c4 bmac_tx_reserve_get
+     /tmp/cc2UnLHx.s:1853   .text:000006de bmac_tx_reserve_set
+     /tmp/cc2UnLHx.s:1920   .text:0000072e bmac_encryption_set_ctr_counter
+     /tmp/cc2UnLHx.s:2065   .text:000007e8 bmac_rx_pkt_get
+                            *COM*:00000004 _nrk_signal_list
+                            *COM*:00000080 nrk_idle_task_stk
+                            *COM*:00000002 nrk_kernel_stk_ptr
+                            *COM*:00000001 _nrk_prev_timer_val
+                            *COM*:00000001 _nrk_time_trigger
+                            *COM*:00000002 app_timer0_callback
+                            *COM*:00000001 app_timer0_prescale
+                            *COM*:00000001 error_task
+                            *COM*:00000001 error_num
+
+UNDEFINED SYMBOLS
+__do_copy_data
+__do_clear_bss
+nrk_task_set_entry_function
+nrk_task_set_stk
+nrk_activate_task
+nrk_event_signal
+rf_polling_rx_on
+nrk_spin_wait_us
+rf_rx_off
+_nrk_time_to_ticks
+rand
+__divmodhi4
+__udivmodhi4
+nrk_wait_until_ticks
+nrk_wait_until_next_n_periods
+rf_test_mode
+rf_carrier_on
+nrk_wait
+rf_carrier_off
+rf_data_mode
+rf_tx_packet
+rf_set_rx
+rf_rx_check_fifop
+rf_polling_rx_packet
+nrk_signal_register
+nrk_event_wait
+nrk_reserve_consume
+rf_init
+nrk_signal_create
+nrk_kprintf
+nrk_cur_task_TCB
+nrk_kernel_error_add
+rf_set_cca_thresh
+rf_tx_power
+rf_security_disable
+rf_security_enable
+rf_security_set_key
+rf_security_last_pkt_status
+rf_addr_decode_set_my_mac
+rf_addr_decode_enable
+rf_addr_decode_disable
+rf_auto_ack_enable
+rf_auto_ack_disable
+nrk_reserve_get
+nrk_reserve_create
+nrk_reserve_set
+rf_security_set_ctr_counter
+nrk_wait_until_next_period
